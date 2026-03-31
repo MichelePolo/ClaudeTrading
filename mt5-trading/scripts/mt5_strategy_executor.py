@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-MT5 Strategy Executor — Esegue strategie definite in JSON.
+MT5 Strategy Executor — Executes strategies defined in JSON.
 
-Questo script è il bridge tra Claude (che genera strategie in JSON)
-e la libreria mt5_trading.py che le esegue su MetaTrader 5.
+This script is the bridge between Claude (which generates strategies in JSON)
+and the mt5_trading.py library that executes them on MetaTrader 5.
 
-Uso:
+Usage:
     python mt5_strategy_executor.py strategy.json
     python mt5_strategy_executor.py --inline '{"actions": [...]}'
 """
@@ -16,19 +16,19 @@ import sys
 import time
 from pathlib import Path
 
-# Aggiungi la directory corrente al path per importare mt5_trading
+# Add the current directory to the path to import mt5_trading
 sys.path.insert(0, str(Path(__file__).parent))
 import mt5_trading as mt5t
 
 
 def execute_action(action: dict) -> dict:
-    """Esegue una singola azione di trading.
+    """Execute a single trading action.
 
     Args:
-        action: dict con chiave "action" e parametri specifici.
+        action: dict with key "action" and specific parameters.
 
     Returns:
-        dict con risultato.
+        dict with result.
     """
     act = action.get("action", "").lower()
     params = {k: v for k, v in action.items() if k != "action"}
@@ -95,7 +95,7 @@ def execute_action(action: dict) -> dict:
     }
 
     if act not in action_map:
-        return {"error": f"Azione sconosciuta: '{act}'", "available": list(action_map.keys())}
+        return {"error": f"Unknown action: '{act}'", "available": list(action_map.keys())}
 
     try:
         return action_map[act](**params)
@@ -109,43 +109,43 @@ def _wait(seconds: float) -> dict:
 
 
 def execute_strategy(strategy: dict) -> list[dict]:
-    """Esegue una lista di azioni sequenzialmente.
+    """Execute a list of actions sequentially.
 
     Args:
-        strategy: dict con chiave "actions" (lista di azioni).
-            Opzionale: "description", "risk_rules".
+        strategy: dict with key "actions" (list of actions).
+            Optional: "description", "risk_rules".
 
     Returns:
-        Lista di risultati per ogni azione.
+        List of results for each action.
     """
     actions = strategy.get("actions", [])
     results = []
 
-    print(f"=== Strategia: {strategy.get('description', 'N/A')} ===")
-    print(f"=== Azioni da eseguire: {len(actions)} ===\n")
+    print(f"=== Strategy: {strategy.get('description', 'N/A')} ===")
+    print(f"=== Actions to execute: {len(actions)} ===\n")
 
     for i, action in enumerate(actions, 1):
-        print(f"[{i}/{len(actions)}] Eseguo: {action.get('action', '?')} ...", end=" ")
+        print(f"[{i}/{len(actions)}] Executing: {action.get('action', '?')} ...", end=" ")
         result = execute_action(action)
         results.append({"action_index": i, "action": action, "result": result})
 
         if "error" in result:
-            print(f"ERRORE: {result['error']}")
-            # Se l'azione ha stop_on_error, interrompi
+            print(f"ERROR: {result['error']}")
+            # If the action has stop_on_error, stop execution
             if action.get("stop_on_error", False):
-                print(">>> Stop on error attivo. Interrompo la strategia.")
+                print(">>> Stop on error is active. Stopping the strategy.")
                 break
         else:
             print("OK")
 
-    print(f"\n=== Strategia completata: {len(results)} azioni eseguite ===")
+    print(f"\n=== Strategy completed: {len(results)} actions executed ===")
     return results
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Esegui strategia MT5 da file JSON")
-    parser.add_argument("file", nargs="?", help="File JSON della strategia")
-    parser.add_argument("--inline", help="JSON inline della strategia")
+    parser = argparse.ArgumentParser(description="Execute MT5 strategy from JSON file")
+    parser.add_argument("file", nargs="?", help="JSON file of the strategy")
+    parser.add_argument("--inline", help="Inline JSON of the strategy")
     args = parser.parse_args()
 
     if args.inline:

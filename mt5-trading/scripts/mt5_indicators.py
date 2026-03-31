@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-MT5 Technical Indicators — Indicatori tecnici calcolati sui dati OHLC di MT5.
+MT5 Technical Indicators — Technical indicators computed on MT5 OHLC data.
 
-Indicatori disponibili:
+Available indicators:
   - SMA (Simple Moving Average)
   - EMA (Exponential Moving Average)
   - RSI (Relative Strength Index)
@@ -11,18 +11,18 @@ Indicatori disponibili:
   - ATR (Average True Range)
   - Stochastic Oscillator
   - ADX (Average Directional Index)
-  - Pivot Points (classici, Fibonacci, Camarilla)
-  - Supporti e Resistenze da swing points
+  - Pivot Points (classic, Fibonacci, Camarilla)
+  - Support and Resistance from swing points
 
-Requisiti:
+Requirements:
   pip install MetaTrader5
 
-Uso da CLI:
+CLI usage:
   python mt5_indicators.py EURUSD --timeframe H1 --indicators rsi macd bbands
-  python mt5_indicators.py EURUSD --analysis         # Analisi completa
-  python mt5_indicators.py EURUSD --pivots            # Pivot points giornalieri
+  python mt5_indicators.py EURUSD --analysis         # Full analysis
+  python mt5_indicators.py EURUSD --pivots            # Daily pivot points
 
-Uso come libreria:
+Library usage:
   from mt5_indicators import get_analysis
   result = get_analysis("EURUSD", timeframe="H1")
 """
@@ -51,7 +51,7 @@ except ImportError:
 # ──────────────────────────────────────────────
 
 def _get_closes(symbol: str, timeframe: str = "H1", count: int = 200) -> tuple[list[dict], list[float]]:
-    """Scarica barre OHLC e restituisce (bars, closes)."""
+    """Download OHLC bars and return (bars, closes)."""
     bars = mt5t.get_ohlc(symbol, timeframe, count)
     closes = [b["close"] for b in bars]
     return bars, closes
@@ -80,7 +80,7 @@ def ema(values: list[float], period: int) -> list[Optional[float]]:
     """Exponential Moving Average."""
     result = [None] * len(values)
     k = 2.0 / (period + 1)
-    # Prima EMA = SMA
+    # First EMA = SMA
     first_sma = sum(values[:period]) / period
     result[period - 1] = first_sma
     for i in range(period, len(values)):
@@ -93,17 +93,17 @@ def ema(values: list[float], period: int) -> list[Optional[float]]:
 # ──────────────────────────────────────────────
 
 def rsi(values: list[float], period: int = 14) -> list[Optional[float]]:
-    """Relative Strength Index (metodo Wilder/smoothed)."""
+    """Relative Strength Index (Wilder/smoothed method)."""
     result = [None] * len(values)
     if len(values) < period + 1:
         return result
 
-    # Calcola variazioni
+    # Compute changes
     deltas = [values[i] - values[i - 1] for i in range(1, len(values))]
     gains = [max(d, 0) for d in deltas]
     losses = [max(-d, 0) for d in deltas]
 
-    # Prima media
+    # First average
     avg_gain = sum(gains[:period]) / period
     avg_loss = sum(losses[:period]) / period
 
@@ -136,7 +136,7 @@ def macd(
     slow: int = 26,
     signal_period: int = 9,
 ) -> dict:
-    """MACD con linea, segnale e istogramma."""
+    """MACD with line, signal, and histogram."""
     ema_fast = ema(values, fast)
     ema_slow = ema(values, slow)
 
@@ -145,17 +145,17 @@ def macd(
         if ema_fast[i] is not None and ema_slow[i] is not None:
             macd_line[i] = ema_fast[i] - ema_slow[i]
 
-    # Signal line = EMA del MACD
+    # Signal line = EMA of MACD
     valid_macd = [v for v in macd_line if v is not None]
     signal = ema(valid_macd, signal_period) if len(valid_macd) >= signal_period else [None] * len(valid_macd)
 
-    # Rimappa signal sulla lunghezza originale
+    # Remap signal to original length
     signal_full = [None] * len(values)
     offset = len(values) - len(valid_macd)
     for i, v in enumerate(signal):
         signal_full[i + offset] = v
 
-    # Istogramma
+    # Histogram
     histogram = [None] * len(values)
     for i in range(len(values)):
         if macd_line[i] is not None and signal_full[i] is not None:
@@ -200,7 +200,7 @@ def atr(bars: list[dict], period: int = 14) -> list[Optional[float]]:
     highs, lows, closes = _get_hlc(bars)
     result = [None] * len(bars)
 
-    true_ranges = [highs[0] - lows[0]]  # Prima barra
+    true_ranges = [highs[0] - lows[0]]  # First bar
     for i in range(1, len(bars)):
         tr = max(
             highs[i] - lows[i],
@@ -212,7 +212,7 @@ def atr(bars: list[dict], period: int = 14) -> list[Optional[float]]:
     if len(true_ranges) < period:
         return result
 
-    # Prima ATR = media semplice
+    # First ATR = simple average
     result[period - 1] = sum(true_ranges[:period]) / period
     for i in range(period, len(bars)):
         result[i] = (result[i - 1] * (period - 1) + true_ranges[i]) / period
@@ -227,7 +227,7 @@ def atr(bars: list[dict], period: int = 14) -> list[Optional[float]]:
 def stochastic(
     bars: list[dict], k_period: int = 14, d_period: int = 3
 ) -> dict:
-    """Stochastic %K e %D."""
+    """Stochastic %K and %D."""
     highs, lows, closes = _get_hlc(bars)
     k_values = [None] * len(bars)
 
@@ -241,7 +241,7 @@ def stochastic(
         else:
             k_values[i] = ((closes[i] - lowest) / (highest - lowest)) * 100
 
-    # %D = SMA di %K
+    # %D = SMA of %K
     valid_k = [v for v in k_values if v is not None]
     d_sma = sma(valid_k, d_period) if len(valid_k) >= d_period else [None] * len(valid_k)
 
@@ -258,7 +258,7 @@ def stochastic(
 # ──────────────────────────────────────────────
 
 def adx(bars: list[dict], period: int = 14) -> dict:
-    """Average Directional Index con +DI e -DI."""
+    """Average Directional Index with +DI and -DI."""
     highs, lows, closes = _get_hlc(bars)
     n = len(bars)
 
@@ -324,20 +324,20 @@ def adx(bars: list[dict], period: int = 14) -> dict:
 # ──────────────────────────────────────────────
 
 def pivot_points(symbol: str, method: str = "classic") -> dict:
-    """Calcola pivot points dal giorno precedente.
+    """Compute pivot points from the previous day.
 
     Args:
-        symbol: Simbolo di trading.
-        method: 'classic', 'fibonacci', o 'camarilla'.
+        symbol: Trading symbol.
+        method: 'classic', 'fibonacci', or 'camarilla'.
 
     Returns:
-        dict con pivot, supporti e resistenze.
+        dict with pivot, support, and resistance levels.
     """
     bars = mt5t.get_ohlc(symbol, "D1", 2)
     if len(bars) < 2:
-        raise RuntimeError("Dati giornalieri insufficienti")
+        raise RuntimeError("Insufficient daily data")
 
-    prev = bars[-2]  # Giorno precedente
+    prev = bars[-2]  # Previous day
     h, l, c = prev["high"], prev["low"], prev["close"]
     pivot = (h + l + c) / 3
 
@@ -379,11 +379,11 @@ def pivot_points(symbol: str, method: str = "classic") -> dict:
             "s4": round(c - diff * 1.1 / 2, 5),
         }
     else:
-        raise ValueError(f"Metodo '{method}' non valido. Usa: classic, fibonacci, camarilla")
+        raise ValueError(f"Method '{method}' is not valid. Use: classic, fibonacci, camarilla")
 
 
 # ──────────────────────────────────────────────
-#  Analisi completa
+#  Full analysis
 # ──────────────────────────────────────────────
 
 def get_analysis(
@@ -391,15 +391,15 @@ def get_analysis(
     timeframe: str = "H1",
     count: int = 200,
 ) -> dict:
-    """Esegue un'analisi tecnica completa su un simbolo.
+    """Perform a full technical analysis on a symbol.
 
     Returns:
-        dict con tutti gli indicatori calcolati e un sommario.
+        dict with all computed indicators and a summary.
     """
     mt5t._check_initialized()
     bars, closes = _get_closes(symbol, timeframe, count)
 
-    # Calcola indicatori
+    # Compute indicators
     rsi_values = rsi(closes)
     macd_data = macd(closes)
     bb_data = bollinger_bands(closes)
@@ -412,7 +412,7 @@ def get_analysis(
     ema_12 = ema(closes, 12)
     ema_26 = ema(closes, 26)
 
-    # Valori correnti (ultimo disponibile)
+    # Current values (latest available)
     current = closes[-1]
     current_rsi = rsi_values[-1]
     current_macd = macd_data["macd_line"][-1]
@@ -427,7 +427,7 @@ def get_analysis(
     current_plus_di = adx_data["plus_di"][-1]
     current_minus_di = adx_data["minus_di"][-1]
 
-    # Genera segnali
+    # Generate signals
     signals = []
 
     # RSI
@@ -480,7 +480,7 @@ def get_analysis(
         else:
             signals.append({"indicator": "SMA_Cross", "signal": "DEATH_CROSS", "value": "SMA50 < SMA200"})
 
-    # Bias complessivo
+    # Overall bias
     bullish = sum(1 for s in signals if "BULLISH" in s["signal"] or "OVERSOLD" in s["signal"] or "GOLDEN" in s["signal"])
     bearish = sum(1 for s in signals if "BEARISH" in s["signal"] or "OVERBOUGHT" in s["signal"] or "DEATH" in s["signal"])
 
@@ -530,15 +530,15 @@ def get_analysis(
 
 def main():
     parser = argparse.ArgumentParser(description="MT5 Technical Indicators")
-    parser.add_argument("symbol", help="Simbolo (es. EURUSD)")
+    parser.add_argument("symbol", help="Symbol (e.g. EURUSD)")
     parser.add_argument("--timeframe", default="H1", help="Timeframe (M1..MN1)")
-    parser.add_argument("--count", type=int, default=200, help="Numero barre")
+    parser.add_argument("--count", type=int, default=200, help="Number of bars")
     parser.add_argument(
         "--indicators", nargs="+",
         choices=["sma", "ema", "rsi", "macd", "bbands", "atr", "stoch", "adx"],
-        help="Indicatori specifici",
+        help="Specific indicators",
     )
-    parser.add_argument("--analysis", action="store_true", help="Analisi completa")
+    parser.add_argument("--analysis", action="store_true", help="Full analysis")
     parser.add_argument("--pivots", choices=["classic", "fibonacci", "camarilla"],
                         nargs="?", const="classic", help="Pivot points")
 

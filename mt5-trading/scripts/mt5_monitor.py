@@ -1,23 +1,23 @@
 #!/usr/bin/env python3
 """
-MT5 Monitor — Monitoraggio continuo con regole configurabili.
+MT5 Monitor — Continuous monitoring with configurable rules.
 
-Funzionalità:
-  - Loop di monitoraggio con intervallo configurabile
-  - Trailing stop automatico su posizioni attive
-  - Break-even automatico quando il profitto supera una soglia
-  - Alert su livelli di prezzo (breakout / breakdown)
-  - Chiusura automatica su condizioni (max profit, max loss, orario)
-  - Alert su indicatori tecnici (RSI overbought/oversold, MACD cross)
-  - Log di tutte le azioni in un file JSON
-  - Notifiche desktop (Windows toast) opzionali
+Features:
+  - Monitoring loop with configurable interval
+  - Automatic trailing stop on active positions
+  - Automatic break-even when profit exceeds a threshold
+  - Price level alerts (breakout / breakdown)
+  - Automatic close on conditions (max profit, max loss, time)
+  - Technical indicator alerts (RSI overbought/oversold, MACD cross)
+  - Logging of all actions to a JSON file
+  - Optional desktop notifications (Windows toast)
 
-Uso:
+Usage:
   python mt5_monitor.py config.json
-  python mt5_monitor.py --generate-config     # Genera config di esempio
-  python mt5_monitor.py config.json --dry-run  # Simula senza eseguire
+  python mt5_monitor.py --generate-config     # Generate example config
+  python mt5_monitor.py config.json --dry-run  # Simulate without executing
 
-Formato config — vedi --generate-config per un esempio completo.
+Config format — see --generate-config for a complete example.
 """
 
 from __future__ import annotations
@@ -41,7 +41,7 @@ except ImportError:
     print("ERROR: pip install MetaTrader5", file=sys.stderr)
     sys.exit(1)
 
-# Prova a importare gli indicatori (opzionale)
+# Try to import indicators (optional)
 try:
     import mt5_indicators as indicators
     HAS_INDICATORS = True
@@ -54,7 +54,7 @@ except ImportError:
 # ──────────────────────────────────────────────
 
 class MonitorLog:
-    """Scrive log in JSON e su console."""
+    """Writes logs in JSON and to console."""
 
     def __init__(self, log_file: str = "mt5_monitor_log.json"):
         self.log_file = log_file
@@ -84,29 +84,29 @@ class MonitorLog:
 
 
 # ──────────────────────────────────────────────
-#  Notifiche desktop (Windows)
+#  Desktop notifications (Windows)
 # ──────────────────────────────────────────────
 
 def _notify_desktop(title: str, message: str):
-    """Mostra una notifica desktop su Windows (best-effort)."""
+    """Shows a desktop notification on Windows (best-effort)."""
     try:
         from ctypes import windll
-        # Usa PowerShell per toast notification
+        # Use PowerShell for toast notification
         ps_cmd = (
             f'powershell -Command "New-BurntToastNotification '
             f"-Text '{title}', '{message}'\" 2>nul"
         )
         os.system(ps_cmd)
     except Exception:
-        pass  # Non critico
+        pass  # Not critical
 
 
 # ──────────────────────────────────────────────
-#  Regole di monitoraggio
+#  Monitoring rules
 # ──────────────────────────────────────────────
 
 class MonitorEngine:
-    """Motore di monitoraggio che valuta regole ad ogni ciclo."""
+    """Monitoring engine that evaluates rules on each cycle."""
 
     def __init__(self, config: dict, dry_run: bool = False):
         self.config = config
@@ -114,47 +114,47 @@ class MonitorEngine:
         self.log = MonitorLog(config.get("log_file", "mt5_monitor_log.json"))
         self.running = True
         self.cycle_count = 0
-        self.alerts_fired: set[str] = set()  # Evita alert ripetuti
+        self.alerts_fired: set[str] = set()  # Avoid repeated alerts
 
     def run(self):
-        """Loop principale di monitoraggio."""
+        """Main monitoring loop."""
         interval = self.config.get("interval_seconds", 30)
-        max_cycles = self.config.get("max_cycles", 0)  # 0 = infinito
+        max_cycles = self.config.get("max_cycles", 0)  # 0 = infinite
 
-        self.log.log("INFO", f"Monitor avviato (intervallo: {interval}s, dry_run: {self.dry_run})")
+        self.log.log("INFO", f"Monitor started (interval: {interval}s, dry_run: {self.dry_run})")
 
-        # Registra signal handler per uscita pulita
+        # Register signal handler for graceful exit
         signal.signal(signal.SIGINT, self._handle_stop)
         signal.signal(signal.SIGTERM, self._handle_stop)
 
         while self.running:
             self.cycle_count += 1
             print(f"\n{'='*50}")
-            print(f"  Ciclo #{self.cycle_count} — {datetime.now().strftime('%H:%M:%S')}")
+            print(f"  Cycle #{self.cycle_count} — {datetime.now().strftime('%H:%M:%S')}")
             print(f"{'='*50}")
 
             try:
                 self._run_cycle()
             except Exception as e:
-                self.log.log("ERROR", f"Errore nel ciclo: {e}")
+                self.log.log("ERROR", f"Error in cycle: {e}")
 
             if max_cycles > 0 and self.cycle_count >= max_cycles:
-                self.log.log("INFO", f"Raggiunto max_cycles ({max_cycles}). Stop.")
+                self.log.log("INFO", f"Reached max_cycles ({max_cycles}). Stopping.")
                 break
 
             if self.running:
                 time.sleep(interval)
 
-        self.log.log("INFO", "Monitor terminato.")
+        self.log.log("INFO", "Monitor stopped.")
 
     def _handle_stop(self, signum, frame):
-        self.log.log("INFO", "Segnale di stop ricevuto. Uscita...")
+        self.log.log("INFO", "Stop signal received. Exiting...")
         self.running = False
 
     def _run_cycle(self):
-        """Esegue un singolo ciclo di monitoraggio."""
+        """Executes a single monitoring cycle."""
         positions = mt5t.get_positions()
-        self.log.log("INFO", f"Posizioni aperte: {len(positions)}")
+        self.log.log("INFO", f"Open positions: {len(positions)}")
 
         rules = self.config.get("rules", [])
 
@@ -164,10 +164,10 @@ class MonitorEngine:
             try:
                 self._evaluate_rule(rule, positions)
             except Exception as e:
-                self.log.log("ERROR", f"Errore nella regola '{rule.get('name', '?')}': {e}")
+                self.log.log("ERROR", f"Error in rule '{rule.get('name', '?')}': {e}")
 
     def _evaluate_rule(self, rule: dict, positions: list[dict]):
-        """Valuta una singola regola."""
+        """Evaluates a single rule."""
         rule_type = rule.get("type", "")
 
         if rule_type == "trailing_stop":
@@ -187,9 +187,9 @@ class MonitorEngine:
         elif rule_type == "max_drawdown":
             self._rule_max_drawdown(rule, positions)
         else:
-            self.log.log("WARN", f"Tipo regola sconosciuto: {rule_type}")
+            self.log.log("WARN", f"Unknown rule type: {rule_type}")
 
-    # — Trailing Stop automatico —
+    # — Automatic Trailing Stop —
     def _rule_trailing_stop(self, rule: dict, positions: list[dict]):
         trail_points = rule["trail_points"]
         symbol_filter = rule.get("symbol")
@@ -201,14 +201,14 @@ class MonitorEngine:
             if magic_filter is not None and pos["magic"] != magic_filter:
                 continue
             if pos["profit"] <= 0:
-                continue  # Solo posizioni in profitto
+                continue  # Only positions in profit
 
-            self.log.log("ACTION", f"Trailing stop su #{pos['ticket']} ({pos['symbol']}): {trail_points} punti")
+            self.log.log("ACTION", f"Trailing stop on #{pos['ticket']} ({pos['symbol']}): {trail_points} points")
             if not self.dry_run:
                 result = mt5t.apply_trailing_stop(pos["ticket"], trail_points)
                 self.log.log("INFO", f"  → {result.get('status', 'unknown')}", result)
 
-    # — Break-even automatico —
+    # — Automatic Break-even —
     def _rule_breakeven(self, rule: dict, positions: list[dict]):
         min_profit_points = rule.get("min_profit_points", 100)
         offset = rule.get("offset_points", 5)
@@ -217,7 +217,7 @@ class MonitorEngine:
         for pos in positions:
             if symbol_filter and pos["symbol"] != symbol_filter:
                 continue
-            # Verifica che il profitto in punti sia sufficiente
+            # Check that the profit in points is sufficient
             info = mt5.symbol_info(pos["symbol"])
             if not info:
                 continue
@@ -232,44 +232,44 @@ class MonitorEngine:
 
             if be_triggered:
                 self.log.log("ACTION",
-                    f"Break-even su #{pos['ticket']} ({pos['symbol']}): profit {profit_points:.0f} pt > {min_profit_points} pt")
+                    f"Break-even on #{pos['ticket']} ({pos['symbol']}): profit {profit_points:.0f} pt > {min_profit_points} pt")
                 if not self.dry_run:
                     result = mt5t.move_to_breakeven(pos["ticket"], offset_points=offset)
                     self.log.log("INFO", f"  → {result.get('status', 'unknown')}", result)
 
-    # — Alert su prezzo —
+    # — Price alert —
     def _rule_price_alert(self, rule: dict):
         symbol = rule["symbol"]
         alert_id = f"price_{symbol}_{rule.get('level', '')}_{rule.get('direction', '')}"
         if alert_id in self.alerts_fired:
-            return  # Già notificato
+            return  # Already notified
 
         tick = mt5t.get_tick(symbol)
         price = tick["bid"]
         level = rule["level"]
-        direction = rule.get("direction", "above")  # "above" o "below"
+        direction = rule.get("direction", "above")  # "above" or "below"
 
         triggered = (direction == "above" and price >= level) or \
                     (direction == "below" and price <= level)
 
         if triggered:
-            msg = f"ALERT: {symbol} ha {'superato' if direction == 'above' else 'rotto'} {level} (attuale: {price})"
+            msg = f"ALERT: {symbol} has {'broken above' if direction == 'above' else 'broken below'} {level} (current: {price})"
             self.log.log("ALERT", msg)
             self.alerts_fired.add(alert_id)
             if rule.get("notify_desktop", False):
                 _notify_desktop("MT5 Price Alert", msg)
 
-            # Azione opzionale
+            # Optional action
             if "action" in rule:
-                self.log.log("ACTION", f"Eseguo azione su alert: {rule['action']}")
+                self.log.log("ACTION", f"Executing action on alert: {rule['action']}")
                 if not self.dry_run:
                     from mt5_strategy_executor import execute_action
                     result = execute_action(rule["action"])
-                    self.log.log("INFO", f"  → Risultato azione", result)
+                    self.log.log("INFO", f"  → Action result", result)
 
-    # — Chiudi su profitto —
+    # — Close on profit —
     def _rule_close_on_profit(self, rule: dict, positions: list[dict]):
-        target_profit = rule["target_profit"]  # In valuta account
+        target_profit = rule["target_profit"]  # In account currency
         symbol_filter = rule.get("symbol")
         magic_filter = rule.get("magic")
 
@@ -281,14 +281,14 @@ class MonitorEngine:
 
             if pos["profit"] >= target_profit:
                 self.log.log("ACTION",
-                    f"Chiusura per profitto #{pos['ticket']}: {pos['profit']:.2f} >= {target_profit}")
+                    f"Closing on profit #{pos['ticket']}: {pos['profit']:.2f} >= {target_profit}")
                 if not self.dry_run:
                     result = mt5t.close_position(pos["ticket"])
                     self.log.log("INFO", f"  → {result.get('status', 'unknown')}", result)
 
-    # — Chiudi su perdita —
+    # — Close on loss —
     def _rule_close_on_loss(self, rule: dict, positions: list[dict]):
-        max_loss = rule["max_loss"]  # In valuta account (positivo)
+        max_loss = rule["max_loss"]  # In account currency (positive)
         symbol_filter = rule.get("symbol")
 
         for pos in positions:
@@ -297,14 +297,14 @@ class MonitorEngine:
 
             if pos["profit"] <= -abs(max_loss):
                 self.log.log("ACTION",
-                    f"Chiusura per perdita #{pos['ticket']}: {pos['profit']:.2f} <= -{max_loss}")
+                    f"Closing on loss #{pos['ticket']}: {pos['profit']:.2f} <= -{max_loss}")
                 if not self.dry_run:
                     result = mt5t.close_position(pos["ticket"])
                     self.log.log("INFO", f"  → {result.get('status', 'unknown')}", result)
 
-    # — Chiudi a orario —
+    # — Close on time —
     def _rule_close_on_time(self, rule: dict, positions: list[dict]):
-        close_time = rule["close_after"]  # Formato "HH:MM"
+        close_time = rule["close_after"]  # Format "HH:MM"
         h, m = map(int, close_time.split(":"))
         now = datetime.now()
 
@@ -319,15 +319,15 @@ class MonitorEngine:
                     continue
 
                 self.log.log("ACTION",
-                    f"Chiusura per orario #{pos['ticket']} ({pos['symbol']}): dopo {close_time}")
+                    f"Closing on time #{pos['ticket']} ({pos['symbol']}): after {close_time}")
                 if not self.dry_run:
                     result = mt5t.close_position(pos["ticket"])
                     self.log.log("INFO", f"  → {result.get('status', 'unknown')}", result)
 
-    # — Alert su indicatori —
+    # — Indicator alerts —
     def _rule_indicator_alert(self, rule: dict):
         if not HAS_INDICATORS:
-            self.log.log("WARN", "mt5_indicators non disponibile per indicator_alert")
+            self.log.log("WARN", "mt5_indicators not available for indicator_alert")
             return
 
         symbol = rule["symbol"]
@@ -348,40 +348,40 @@ class MonitorEngine:
             threshold = rule.get("threshold", 70)
             if rsi_val and rsi_val > threshold:
                 triggered = True
-                msg = f"RSI overbought su {symbol}: {rsi_val:.1f} > {threshold}"
+                msg = f"RSI overbought on {symbol}: {rsi_val:.1f} > {threshold}"
 
         elif indicator == "rsi_oversold":
             rsi_val = analysis["indicators"]["rsi_14"]
             threshold = rule.get("threshold", 30)
             if rsi_val and rsi_val < threshold:
                 triggered = True
-                msg = f"RSI oversold su {symbol}: {rsi_val:.1f} < {threshold}"
+                msg = f"RSI oversold on {symbol}: {rsi_val:.1f} < {threshold}"
 
         elif indicator == "macd_bullish_cross":
             hist = analysis["indicators"]["macd_histogram"]
             if hist and hist > 0:
                 triggered = True
-                msg = f"MACD bullish cross su {symbol}: histogram = {hist:.6f}"
+                msg = f"MACD bullish cross on {symbol}: histogram = {hist:.6f}"
 
         elif indicator == "macd_bearish_cross":
             hist = analysis["indicators"]["macd_histogram"]
             if hist and hist < 0:
                 triggered = True
-                msg = f"MACD bearish cross su {symbol}: histogram = {hist:.6f}"
+                msg = f"MACD bearish cross on {symbol}: histogram = {hist:.6f}"
 
         elif indicator == "bb_upper_breakout":
             price = analysis["current_price"]
             bb_upper = analysis["indicators"]["bb_upper"]
             if bb_upper and price > bb_upper:
                 triggered = True
-                msg = f"Bollinger upper breakout su {symbol}: {price} > {bb_upper}"
+                msg = f"Bollinger upper breakout on {symbol}: {price} > {bb_upper}"
 
         elif indicator == "bb_lower_breakout":
             price = analysis["current_price"]
             bb_lower = analysis["indicators"]["bb_lower"]
             if bb_lower and price < bb_lower:
                 triggered = True
-                msg = f"Bollinger lower breakout su {symbol}: {price} < {bb_lower}"
+                msg = f"Bollinger lower breakout on {symbol}: {price} < {bb_lower}"
 
         if triggered:
             self.log.log("ALERT", msg)
@@ -389,11 +389,11 @@ class MonitorEngine:
             if rule.get("notify_desktop", False):
                 _notify_desktop("MT5 Indicator Alert", msg)
             if "action" in rule:
-                self.log.log("ACTION", f"Eseguo azione: {rule['action']}")
+                self.log.log("ACTION", f"Executing action: {rule['action']}")
                 if not self.dry_run:
                     from mt5_strategy_executor import execute_action
                     result = execute_action(rule["action"])
-                    self.log.log("INFO", f"  → Risultato", result)
+                    self.log.log("INFO", f"  → Result", result)
 
     # — Max Drawdown —
     def _rule_max_drawdown(self, rule: dict, positions: list[dict]):
@@ -405,31 +405,31 @@ class MonitorEngine:
         dd = ((acc.balance - acc.equity) / acc.balance) * 100 if acc.balance > 0 else 0
 
         if dd >= max_dd_percent:
-            msg = f"DRAWDOWN CRITICO: {dd:.2f}% >= {max_dd_percent}%"
+            msg = f"CRITICAL DRAWDOWN: {dd:.2f}% >= {max_dd_percent}%"
             self.log.log("ALERT", msg)
             if rule.get("close_all", False):
-                self.log.log("ACTION", "Chiusura di TUTTE le posizioni per max drawdown!")
+                self.log.log("ACTION", "Closing ALL positions due to max drawdown!")
                 if not self.dry_run:
                     result = mt5t.close_all_positions()
-                    self.log.log("INFO", "Risultato chiusura totale", result)
+                    self.log.log("INFO", "Total close result", result)
 
 
 # ──────────────────────────────────────────────
-#  Config di esempio
+#  Example config
 # ──────────────────────────────────────────────
 
 EXAMPLE_CONFIG = {
-    "description": "Configurazione di esempio per MT5 Monitor",
+    "description": "Example configuration for MT5 Monitor",
     "interval_seconds": 30,
     "max_cycles": 0,
     "log_file": "mt5_monitor_log.json",
     "rules": [
         {
-            "name": "Trailing stop globale",
+            "name": "Global trailing stop",
             "type": "trailing_stop",
             "enabled": True,
             "trail_points": 200,
-            "comment": "Applica trailing stop di 200 punti a tutte le posizioni in profitto"
+            "comment": "Apply 200-point trailing stop to all profitable positions"
         },
         {
             "name": "Break-even EURUSD",
@@ -438,38 +438,38 @@ EXAMPLE_CONFIG = {
             "symbol": "EURUSD",
             "min_profit_points": 150,
             "offset_points": 5,
-            "comment": "Sposta a BE quando il profitto supera 15 pips"
+            "comment": "Move to BE when profit exceeds 15 pips"
         },
         {
-            "name": "Alert breakout EURUSD",
+            "name": "Breakout alert EURUSD",
             "type": "price_alert",
             "enabled": False,
             "symbol": "EURUSD",
             "level": 1.1000,
             "direction": "above",
             "notify_desktop": True,
-            "comment": "Avvisa se EURUSD rompe 1.1000"
+            "comment": "Alert if EURUSD breaks above 1.1000"
         },
         {
-            "name": "Take profit a 50€",
+            "name": "Take profit at 50 EUR",
             "type": "close_on_profit",
             "enabled": False,
             "target_profit": 50.0,
-            "comment": "Chiudi posizioni con profitto >= 50€"
+            "comment": "Close positions with profit >= 50 EUR"
         },
         {
-            "name": "Stop loss a 30€",
+            "name": "Stop loss at 30 EUR",
             "type": "close_on_loss",
             "enabled": False,
             "max_loss": 30.0,
-            "comment": "Chiudi posizioni con perdita >= 30€"
+            "comment": "Close positions with loss >= 30 EUR"
         },
         {
-            "name": "Chiusura fine giornata",
+            "name": "End of day close",
             "type": "close_on_time",
             "enabled": False,
             "close_after": "21:30",
-            "comment": "Chiudi tutto dopo le 21:30"
+            "comment": "Close everything after 21:30"
         },
         {
             "name": "RSI overbought EURUSD",
@@ -480,7 +480,7 @@ EXAMPLE_CONFIG = {
             "indicator": "rsi_overbought",
             "threshold": 75,
             "notify_desktop": True,
-            "comment": "Alert quando RSI > 75"
+            "comment": "Alert when RSI > 75"
         },
         {
             "name": "Max drawdown 5%",
@@ -488,7 +488,7 @@ EXAMPLE_CONFIG = {
             "enabled": True,
             "max_drawdown_percent": 5.0,
             "close_all": True,
-            "comment": "Chiudi TUTTO se il drawdown supera il 5%"
+            "comment": "Close ALL if drawdown exceeds 5%"
         }
     ]
 }
@@ -499,18 +499,18 @@ EXAMPLE_CONFIG = {
 # ──────────────────────────────────────────────
 
 def main():
-    parser = argparse.ArgumentParser(description="MT5 Monitor — Monitoraggio continuo")
-    parser.add_argument("config", nargs="?", help="File di configurazione JSON")
-    parser.add_argument("--generate-config", action="store_true", help="Genera config di esempio")
-    parser.add_argument("--dry-run", action="store_true", help="Simula senza eseguire azioni")
-    parser.add_argument("--interval", type=int, help="Override intervallo in secondi")
+    parser = argparse.ArgumentParser(description="MT5 Monitor — Continuous monitoring")
+    parser.add_argument("config", nargs="?", help="JSON configuration file")
+    parser.add_argument("--generate-config", action="store_true", help="Generate example config")
+    parser.add_argument("--dry-run", action="store_true", help="Simulate without executing actions")
+    parser.add_argument("--interval", type=int, help="Override interval in seconds")
     args = parser.parse_args()
 
     if args.generate_config:
         out_path = "mt5_monitor_config.json"
         with open(out_path, "w", encoding="utf-8") as f:
             json.dump(EXAMPLE_CONFIG, f, indent=2, ensure_ascii=False)
-        print(f"Config di esempio salvata in: {out_path}")
+        print(f"Example config saved to: {out_path}")
         sys.exit(0)
 
     if not args.config:
@@ -523,22 +523,22 @@ def main():
     if args.interval:
         config["interval_seconds"] = args.interval
 
-    # Connetti a MT5
-    print("Connessione a MT5...")
+    # Connect to MT5
+    print("Connecting to MT5...")
     try:
         info = mt5t.connect()
-        print(f"Connesso: {info['name']} | Saldo: {info['balance']} {info['currency']}\n")
+        print(f"Connected: {info['name']} | Balance: {info['balance']} {info['currency']}\n")
     except Exception as e:
-        print(f"Errore connessione: {e}", file=sys.stderr)
+        print(f"Connection error: {e}", file=sys.stderr)
         sys.exit(1)
 
-    # Avvia monitor
+    # Start monitor
     engine = MonitorEngine(config, dry_run=args.dry_run)
     try:
         engine.run()
     finally:
         mt5t.disconnect()
-        print("\nDisconnesso da MT5.")
+        print("\nDisconnected from MT5.")
 
 
 if __name__ == "__main__":

@@ -1,22 +1,22 @@
 #!/usr/bin/env python3
 """
-MT5 Trading Library — Utility completa per MetaTrader 5.
+MT5 Trading Library — Complete utility for MetaTrader 5.
 
-Operazioni supportate:
-  - Connessione / disconnessione a MT5
-  - Info account e simboli
-  - Apertura ordini (market & pending)
-  - Chiusura totale o parziale
-  - Modifica SL / TP
+Supported operations:
+  - Connection / disconnection to MT5
+  - Account and symbol info
+  - Opening orders (market & pending)
+  - Full or partial close
+  - Modify SL / TP
   - Trailing stop
-  - Query posizioni e ordini pendenti
-  - Calcolo lotto da rischio percentuale
-  - Chiusura multipla (per simbolo, per magic, tutte)
+  - Query positions and pending orders
+  - Lot size calculation from risk percentage
+  - Multiple close (by symbol, by magic, all)
 
-Requisiti:
+Requirements:
   pip install MetaTrader5
 
-Uso da CLI:
+CLI usage:
   python mt5_trading.py --help
 """
 
@@ -50,22 +50,22 @@ def _now_utc() -> datetime:
 
 
 def _json_out(data: dict | list, pretty: bool = True) -> str:
-    """Serializza in JSON human-readable."""
+    """Serialize to human-readable JSON."""
     return json.dumps(data, indent=2 if pretty else None, default=str, ensure_ascii=False)
 
 
 def _check_initialized():
-    """Verifica che MT5 sia inizializzato."""
+    """Check that MT5 is initialized."""
     if not mt5.terminal_info():
         raise RuntimeError(
-            "MT5 non inizializzato. Chiama prima 'connect' o esegui: "
+            "MT5 not initialized. Call 'connect' first or run: "
             "python mt5_trading.py connect"
         )
 
 
 def _last_error() -> str:
     err = mt5.last_error()
-    return f"[{err[0]}] {err[1]}" if err else "Errore sconosciuto"
+    return f"[{err[0]}] {err[1]}" if err else "Unknown error"
 
 
 def _position_to_dict(pos) -> dict:
@@ -110,7 +110,7 @@ def _order_to_dict(order) -> dict:
 
 
 # ──────────────────────────────────────────────
-#  Connessione
+#  Connection
 # ──────────────────────────────────────────────
 
 def connect(
@@ -120,17 +120,17 @@ def connect(
     server: Optional[str] = None,
     timeout: int = 10_000,
 ) -> dict:
-    """Inizializza la connessione a MetaTrader 5.
+    """Initialize the connection to MetaTrader 5.
 
     Args:
-        path: Percorso dell'eseguibile terminal64.exe (opzionale).
-        login: Numero account (opzionale se già loggato).
-        password: Password account.
-        server: Nome server broker.
-        timeout: Timeout connessione in ms.
+        path: Path to the terminal64.exe executable (optional).
+        login: Account number (optional if already logged in).
+        password: Account password.
+        server: Broker server name.
+        timeout: Connection timeout in ms.
 
     Returns:
-        dict con info account.
+        dict with account info.
     """
     kwargs = {"timeout": timeout}
     if path:
@@ -143,11 +143,11 @@ def connect(
         kwargs["server"] = server
 
     if not mt5.initialize(**kwargs):
-        raise RuntimeError(f"Impossibile inizializzare MT5: {_last_error()}")
+        raise RuntimeError(f"Unable to initialize MT5: {_last_error()}")
 
     info = mt5.account_info()
     if info is None:
-        raise RuntimeError(f"Impossibile ottenere info account: {_last_error()}")
+        raise RuntimeError(f"Unable to get account info: {_last_error()}")
 
     return {
         "status": "connected",
@@ -163,7 +163,7 @@ def connect(
 
 
 def disconnect() -> dict:
-    """Chiude la connessione a MT5."""
+    """Close the connection to MT5."""
     mt5.shutdown()
     return {"status": "disconnected"}
 
@@ -173,11 +173,11 @@ def disconnect() -> dict:
 # ──────────────────────────────────────────────
 
 def account_info() -> dict:
-    """Restituisce informazioni sull'account corrente."""
+    """Return information about the current account."""
     _check_initialized()
     info = mt5.account_info()
     if info is None:
-        raise RuntimeError(f"Errore account_info: {_last_error()}")
+        raise RuntimeError(f"account_info error: {_last_error()}")
     return {
         "login": info.login,
         "server": info.server,
@@ -194,12 +194,12 @@ def account_info() -> dict:
 
 
 def symbol_info(symbol: str) -> dict:
-    """Restituisce informazioni su un simbolo."""
+    """Return information about a symbol."""
     _check_initialized()
     info = mt5.symbol_info(symbol)
     if info is None:
-        raise RuntimeError(f"Simbolo '{symbol}' non trovato: {_last_error()}")
-    # Abilita il simbolo nel Market Watch se necessario
+        raise RuntimeError(f"Symbol '{symbol}' not found: {_last_error()}")
+    # Enable the symbol in Market Watch if needed
     if not info.visible:
         mt5.symbol_select(symbol, True)
     tick = mt5.symbol_info_tick(symbol)
@@ -219,11 +219,11 @@ def symbol_info(symbol: str) -> dict:
 
 
 # ──────────────────────────────────────────────
-#  Posizioni e ordini
+#  Positions and orders
 # ──────────────────────────────────────────────
 
 def get_positions(symbol: Optional[str] = None, magic: Optional[int] = None) -> list[dict]:
-    """Elenca posizioni aperte, con filtro opzionale per simbolo/magic."""
+    """List open positions, with optional filter by symbol/magic."""
     _check_initialized()
     if symbol:
         positions = mt5.positions_get(symbol=symbol)
@@ -240,7 +240,7 @@ def get_positions(symbol: Optional[str] = None, magic: Optional[int] = None) -> 
 
 
 def get_pending_orders(symbol: Optional[str] = None) -> list[dict]:
-    """Elenca ordini pendenti."""
+    """List pending orders."""
     _check_initialized()
     if symbol:
         orders = mt5.orders_get(symbol=symbol)
@@ -253,7 +253,7 @@ def get_pending_orders(symbol: Optional[str] = None) -> list[dict]:
 
 
 # ──────────────────────────────────────────────
-#  Calcolo lotto
+#  Lot calculation
 # ──────────────────────────────────────────────
 
 def calculate_lot_size(
@@ -262,16 +262,16 @@ def calculate_lot_size(
     sl_points: float,
     account_balance: Optional[float] = None,
 ) -> dict:
-    """Calcola il volume (lotti) in base al rischio percentuale.
+    """Calculate volume (lots) based on risk percentage.
 
     Args:
-        symbol: Simbolo di trading.
-        risk_percent: Percentuale del saldo da rischiare (es. 1.0 = 1%).
-        sl_points: Distanza dello stop loss in punti.
-        account_balance: Saldo da usare (se None, usa il saldo corrente).
+        symbol: Trading symbol.
+        risk_percent: Percentage of balance to risk (e.g. 1.0 = 1%).
+        sl_points: Stop loss distance in points.
+        account_balance: Balance to use (if None, uses current balance).
 
     Returns:
-        dict con volume calcolato e dettagli.
+        dict with calculated volume and details.
     """
     _check_initialized()
     if account_balance is None:
@@ -280,22 +280,22 @@ def calculate_lot_size(
 
     info = mt5.symbol_info(symbol)
     if info is None:
-        raise RuntimeError(f"Simbolo '{symbol}' non trovato")
+        raise RuntimeError(f"Symbol '{symbol}' not found")
 
     risk_amount = account_balance * (risk_percent / 100.0)
-    # Valore di un punto per 1 lotto
+    # Value of one point for 1 lot
     tick_value = info.trade_tick_value
     tick_size = info.trade_tick_size
     point = info.point
 
     if tick_value <= 0 or tick_size <= 0:
-        raise RuntimeError(f"Impossibile calcolare tick_value per {symbol}")
+        raise RuntimeError(f"Unable to calculate tick_value for {symbol}")
 
-    # Valore monetario per punto per lotto
+    # Monetary value per point per lot
     value_per_point = tick_value * (point / tick_size)
     raw_lot = risk_amount / (sl_points * value_per_point)
 
-    # Arrotonda al volume_step
+    # Round to volume_step
     step = info.volume_step
     lot = max(info.volume_min, min(info.volume_max, round(raw_lot / step) * step))
     lot = round(lot, 2)
@@ -313,7 +313,7 @@ def calculate_lot_size(
 
 
 # ──────────────────────────────────────────────
-#  Apertura ordini
+#  Opening orders
 # ──────────────────────────────────────────────
 
 def open_market_order(
@@ -326,31 +326,31 @@ def open_market_order(
     comment: str = "",
     deviation: int = 20,
 ) -> dict:
-    """Apre un ordine a mercato (BUY o SELL).
+    """Open a market order (BUY or SELL).
 
     Args:
-        symbol: Simbolo di trading.
-        direction: "BUY" o "SELL".
-        volume: Volume in lotti.
-        sl: Prezzo stop loss (0 = nessuno).
-        tp: Prezzo take profit (0 = nessuno).
-        magic: Magic number per identificare la strategia.
-        comment: Commento ordine.
-        deviation: Deviazione massima dal prezzo in punti.
+        symbol: Trading symbol.
+        direction: "BUY" or "SELL".
+        volume: Volume in lots.
+        sl: Stop loss price (0 = none).
+        tp: Take profit price (0 = none).
+        magic: Magic number to identify the strategy.
+        comment: Order comment.
+        deviation: Maximum deviation from price in points.
 
     Returns:
-        dict con dettagli dell'ordine eseguito.
+        dict with executed order details.
     """
     _check_initialized()
     direction = direction.upper()
     if direction not in ("BUY", "SELL"):
-        raise ValueError("direction deve essere 'BUY' o 'SELL'")
+        raise ValueError("direction must be 'BUY' or 'SELL'")
 
-    # Assicura che il simbolo sia visibile
+    # Ensure the symbol is visible
     mt5.symbol_select(symbol, True)
     tick = mt5.symbol_info_tick(symbol)
     if tick is None:
-        raise RuntimeError(f"Impossibile ottenere prezzo per {symbol}: {_last_error()}")
+        raise RuntimeError(f"Unable to get price for {symbol}: {_last_error()}")
 
     order_type = mt5.ORDER_TYPE_BUY if direction == "BUY" else mt5.ORDER_TYPE_SELL
     price = tick.ask if direction == "BUY" else tick.bid
@@ -372,10 +372,10 @@ def open_market_order(
 
     result = mt5.order_send(request)
     if result is None:
-        raise RuntimeError(f"order_send ha restituito None: {_last_error()}")
+        raise RuntimeError(f"order_send returned None: {_last_error()}")
     if result.retcode != mt5.TRADE_RETCODE_DONE:
         raise RuntimeError(
-            f"Ordine rifiutato: [{result.retcode}] {result.comment}"
+            f"Order rejected: [{result.retcode}] {result.comment}"
         )
 
     return {
@@ -404,21 +404,21 @@ def open_pending_order(
     comment: str = "",
     expiration: Optional[str] = None,
 ) -> dict:
-    """Piazza un ordine pendente.
+    """Place a pending order.
 
     Args:
-        symbol: Simbolo.
-        order_type: Uno tra BUY_LIMIT, SELL_LIMIT, BUY_STOP, SELL_STOP.
-        volume: Lotti.
-        price: Prezzo dell'ordine.
+        symbol: Symbol.
+        order_type: One of BUY_LIMIT, SELL_LIMIT, BUY_STOP, SELL_STOP.
+        volume: Lots.
+        price: Order price.
         sl: Stop loss.
         tp: Take profit.
         magic: Magic number.
-        comment: Commento.
-        expiration: Data scadenza ISO (es. "2025-12-31T23:59:00"). None = GTC.
+        comment: Comment.
+        expiration: ISO expiration date (e.g. "2025-12-31T23:59:00"). None = GTC.
 
     Returns:
-        dict con dettagli ordine pendente.
+        dict with pending order details.
     """
     _check_initialized()
     type_map = {
@@ -429,7 +429,7 @@ def open_pending_order(
     }
     order_type = order_type.upper()
     if order_type not in type_map:
-        raise ValueError(f"order_type deve essere uno di: {list(type_map.keys())}")
+        raise ValueError(f"order_type must be one of: {list(type_map.keys())}")
 
     mt5.symbol_select(symbol, True)
 
@@ -455,9 +455,9 @@ def open_pending_order(
 
     result = mt5.order_send(request)
     if result is None:
-        raise RuntimeError(f"order_send ha restituito None: {_last_error()}")
+        raise RuntimeError(f"order_send returned None: {_last_error()}")
     if result.retcode != mt5.TRADE_RETCODE_DONE:
-        raise RuntimeError(f"Ordine rifiutato: [{result.retcode}] {result.comment}")
+        raise RuntimeError(f"Order rejected: [{result.retcode}] {result.comment}")
 
     return {
         "status": "placed",
@@ -473,29 +473,29 @@ def open_pending_order(
 
 
 # ──────────────────────────────────────────────
-#  Chiusura
+#  Closing
 # ──────────────────────────────────────────────
 
 def close_position(ticket: int, volume: Optional[float] = None, deviation: int = 20) -> dict:
-    """Chiude una posizione per ticket (totale o parziale).
+    """Close a position by ticket (full or partial).
 
     Args:
-        ticket: Ticket della posizione.
-        volume: Volume da chiudere. None = chiudi tutto.
-        deviation: Deviazione max in punti.
+        ticket: Position ticket.
+        volume: Volume to close. None = close all.
+        deviation: Max deviation in points.
 
     Returns:
-        dict con risultato chiusura.
+        dict with close result.
     """
     _check_initialized()
     positions = mt5.positions_get(ticket=ticket)
     if not positions:
-        raise RuntimeError(f"Posizione con ticket {ticket} non trovata")
+        raise RuntimeError(f"Position with ticket {ticket} not found")
 
     pos = positions[0]
     close_vol = volume if volume else pos.volume
 
-    # Ordine opposto
+    # Opposite order
     close_type = mt5.ORDER_TYPE_SELL if pos.type == mt5.ORDER_TYPE_BUY else mt5.ORDER_TYPE_BUY
     tick = mt5.symbol_info_tick(pos.symbol)
     price = tick.bid if pos.type == mt5.ORDER_TYPE_BUY else tick.ask
@@ -516,9 +516,9 @@ def close_position(ticket: int, volume: Optional[float] = None, deviation: int =
 
     result = mt5.order_send(request)
     if result is None:
-        raise RuntimeError(f"Chiusura fallita: {_last_error()}")
+        raise RuntimeError(f"Close failed: {_last_error()}")
     if result.retcode != mt5.TRADE_RETCODE_DONE:
-        raise RuntimeError(f"Chiusura rifiutata: [{result.retcode}] {result.comment}")
+        raise RuntimeError(f"Close rejected: [{result.retcode}] {result.comment}")
 
     return {
         "status": "closed",
@@ -530,14 +530,14 @@ def close_position(ticket: int, volume: Optional[float] = None, deviation: int =
 
 
 def close_all_positions(symbol: Optional[str] = None, magic: Optional[int] = None) -> dict:
-    """Chiude tutte le posizioni aperte (con filtro opzionale).
+    """Close all open positions (with optional filter).
 
     Args:
-        symbol: Solo posizioni su questo simbolo.
-        magic: Solo posizioni con questo magic number.
+        symbol: Only positions on this symbol.
+        magic: Only positions with this magic number.
 
     Returns:
-        dict con riepilogo chiusure.
+        dict with close summary.
     """
     positions = get_positions(symbol=symbol, magic=magic)
     results = {"closed": [], "errors": []}
@@ -555,13 +555,13 @@ def close_all_positions(symbol: Optional[str] = None, magic: Optional[int] = Non
 
 
 def cancel_pending_order(ticket: int) -> dict:
-    """Cancella un ordine pendente.
+    """Cancel a pending order.
 
     Args:
-        ticket: Ticket dell'ordine pendente.
+        ticket: Pending order ticket.
 
     Returns:
-        dict con risultato.
+        dict with result.
     """
     _check_initialized()
     request = {
@@ -570,15 +570,15 @@ def cancel_pending_order(ticket: int) -> dict:
     }
     result = mt5.order_send(request)
     if result is None:
-        raise RuntimeError(f"Cancellazione fallita: {_last_error()}")
+        raise RuntimeError(f"Cancellation failed: {_last_error()}")
     if result.retcode != mt5.TRADE_RETCODE_DONE:
-        raise RuntimeError(f"Cancellazione rifiutata: [{result.retcode}] {result.comment}")
+        raise RuntimeError(f"Cancellation rejected: [{result.retcode}] {result.comment}")
 
     return {"status": "cancelled", "ticket": ticket}
 
 
 def cancel_all_pending_orders(symbol: Optional[str] = None) -> dict:
-    """Cancella tutti gli ordini pendenti."""
+    """Cancel all pending orders."""
     orders = get_pending_orders(symbol=symbol)
     results = {"cancelled": [], "errors": []}
 
@@ -594,24 +594,24 @@ def cancel_all_pending_orders(symbol: Optional[str] = None) -> dict:
 
 
 # ──────────────────────────────────────────────
-#  Modifica posizioni
+#  Modify positions
 # ──────────────────────────────────────────────
 
 def modify_position(ticket: int, sl: Optional[float] = None, tp: Optional[float] = None) -> dict:
-    """Modifica SL e/o TP di una posizione aperta.
+    """Modify SL and/or TP of an open position.
 
     Args:
-        ticket: Ticket della posizione.
-        sl: Nuovo stop loss (None = invariato).
-        tp: Nuovo take profit (None = invariato).
+        ticket: Position ticket.
+        sl: New stop loss (None = unchanged).
+        tp: New take profit (None = unchanged).
 
     Returns:
-        dict con risultato modifica.
+        dict with modification result.
     """
     _check_initialized()
     positions = mt5.positions_get(ticket=ticket)
     if not positions:
-        raise RuntimeError(f"Posizione {ticket} non trovata")
+        raise RuntimeError(f"Position {ticket} not found")
 
     pos = positions[0]
     new_sl = sl if sl is not None else pos.sl
@@ -627,9 +627,9 @@ def modify_position(ticket: int, sl: Optional[float] = None, tp: Optional[float]
 
     result = mt5.order_send(request)
     if result is None:
-        raise RuntimeError(f"Modifica fallita: {_last_error()}")
+        raise RuntimeError(f"Modification failed: {_last_error()}")
     if result.retcode != mt5.TRADE_RETCODE_DONE:
-        raise RuntimeError(f"Modifica rifiutata: [{result.retcode}] {result.comment}")
+        raise RuntimeError(f"Modification rejected: [{result.retcode}] {result.comment}")
 
     return {
         "status": "modified",
@@ -647,21 +647,21 @@ def modify_pending_order(
     sl: Optional[float] = None,
     tp: Optional[float] = None,
 ) -> dict:
-    """Modifica un ordine pendente.
+    """Modify a pending order.
 
     Args:
-        ticket: Ticket dell'ordine.
-        price: Nuovo prezzo (None = invariato).
-        sl: Nuovo SL (None = invariato).
-        tp: Nuovo TP (None = invariato).
+        ticket: Order ticket.
+        price: New price (None = unchanged).
+        sl: New SL (None = unchanged).
+        tp: New TP (None = unchanged).
 
     Returns:
-        dict con risultato modifica.
+        dict with modification result.
     """
     _check_initialized()
     orders = mt5.orders_get(ticket=ticket)
     if not orders:
-        raise RuntimeError(f"Ordine pendente {ticket} non trovato")
+        raise RuntimeError(f"Pending order {ticket} not found")
 
     order = orders[0]
     new_price = price if price is not None else order.price_open
@@ -679,9 +679,9 @@ def modify_pending_order(
 
     result = mt5.order_send(request)
     if result is None:
-        raise RuntimeError(f"Modifica fallita: {_last_error()}")
+        raise RuntimeError(f"Modification failed: {_last_error()}")
     if result.retcode != mt5.TRADE_RETCODE_DONE:
-        raise RuntimeError(f"Modifica rifiutata: [{result.retcode}] {result.comment}")
+        raise RuntimeError(f"Modification rejected: [{result.retcode}] {result.comment}")
 
     return {
         "status": "modified",
@@ -697,21 +697,21 @@ def modify_pending_order(
 # ──────────────────────────────────────────────
 
 def apply_trailing_stop(ticket: int, trail_points: float) -> dict:
-    """Applica un trailing stop a una posizione.
+    """Apply a trailing stop to a position.
 
-    Sposta lo SL solo se il prezzo si è mosso a favore oltre trail_points.
+    Moves the SL only if the price has moved favorably beyond trail_points.
 
     Args:
-        ticket: Ticket della posizione.
-        trail_points: Distanza trailing in punti dal prezzo corrente.
+        ticket: Position ticket.
+        trail_points: Trailing distance in points from current price.
 
     Returns:
-        dict con risultato (modified o unchanged).
+        dict with result (modified or unchanged).
     """
     _check_initialized()
     positions = mt5.positions_get(ticket=ticket)
     if not positions:
-        raise RuntimeError(f"Posizione {ticket} non trovata")
+        raise RuntimeError(f"Position {ticket} not found")
 
     pos = positions[0]
     info = mt5.symbol_info(pos.symbol)
@@ -720,7 +720,7 @@ def apply_trailing_stop(ticket: int, trail_points: float) -> dict:
 
     if pos.type == mt5.ORDER_TYPE_BUY:
         new_sl = pos.price_current - trail_distance
-        # Sposta solo se il nuovo SL è meglio del precedente
+        # Move only if the new SL is better than the previous one
         if new_sl > pos.sl:
             return modify_position(ticket, sl=round(new_sl, info.digits))
     else:  # SELL
@@ -731,7 +731,7 @@ def apply_trailing_stop(ticket: int, trail_points: float) -> dict:
     return {
         "status": "unchanged",
         "ticket": ticket,
-        "reason": "Il trailing stop non ha migliorato lo SL corrente",
+        "reason": "Trailing stop did not improve the current SL",
         "current_sl": pos.sl,
         "calculated_sl": round(new_sl, info.digits),
     }
@@ -742,19 +742,19 @@ def apply_trailing_stop(ticket: int, trail_points: float) -> dict:
 # ──────────────────────────────────────────────
 
 def move_to_breakeven(ticket: int, offset_points: float = 0) -> dict:
-    """Sposta lo SL al prezzo di apertura (break even) + offset opzionale.
+    """Move the SL to the opening price (break even) + optional offset.
 
     Args:
-        ticket: Ticket della posizione.
-        offset_points: Punti extra oltre il break-even (per coprire commissioni).
+        ticket: Position ticket.
+        offset_points: Extra points beyond break-even (to cover commissions).
 
     Returns:
-        dict con risultato.
+        dict with result.
     """
     _check_initialized()
     positions = mt5.positions_get(ticket=ticket)
     if not positions:
-        raise RuntimeError(f"Posizione {ticket} non trovata")
+        raise RuntimeError(f"Position {ticket} not found")
 
     pos = positions[0]
     info = mt5.symbol_info(pos.symbol)
@@ -763,11 +763,11 @@ def move_to_breakeven(ticket: int, offset_points: float = 0) -> dict:
     if pos.type == mt5.ORDER_TYPE_BUY:
         be_price = pos.price_open + (offset_points * point)
         if pos.price_current < be_price:
-            return {"status": "skipped", "reason": "Prezzo ancora sotto break-even"}
+            return {"status": "skipped", "reason": "Price still below break-even"}
     else:
         be_price = pos.price_open - (offset_points * point)
         if pos.price_current > be_price:
-            return {"status": "skipped", "reason": "Prezzo ancora sopra break-even"}
+            return {"status": "skipped", "reason": "Price still above break-even"}
 
     return modify_position(ticket, sl=round(be_price, info.digits))
 
@@ -777,12 +777,12 @@ def move_to_breakeven(ticket: int, offset_points: float = 0) -> dict:
 # ──────────────────────────────────────────────
 
 def get_tick(symbol: str) -> dict:
-    """Ottieni l'ultimo tick (bid/ask) per un simbolo."""
+    """Get the latest tick (bid/ask) for a symbol."""
     _check_initialized()
     mt5.symbol_select(symbol, True)
     tick = mt5.symbol_info_tick(symbol)
     if tick is None:
-        raise RuntimeError(f"Impossibile ottenere tick per {symbol}: {_last_error()}")
+        raise RuntimeError(f"Unable to get tick for {symbol}: {_last_error()}")
     return {
         "symbol": symbol,
         "bid": tick.bid,
@@ -794,15 +794,15 @@ def get_tick(symbol: str) -> dict:
 
 
 def get_ohlc(symbol: str, timeframe: str = "H1", count: int = 100) -> list[dict]:
-    """Scarica barre OHLC.
+    """Download OHLC bars.
 
     Args:
-        symbol: Simbolo.
-        timeframe: Timeframe stringa (M1, M5, M15, M30, H1, H4, D1, W1, MN1).
-        count: Numero di barre.
+        symbol: Symbol.
+        timeframe: Timeframe string (M1, M5, M15, M30, H1, H4, D1, W1, MN1).
+        count: Number of bars.
 
     Returns:
-        Lista di dict con open, high, low, close, volume, time.
+        List of dicts with open, high, low, close, volume, time.
     """
     _check_initialized()
     tf_map = {
@@ -814,12 +814,12 @@ def get_ohlc(symbol: str, timeframe: str = "H1", count: int = 100) -> list[dict]
     }
     tf = tf_map.get(timeframe.upper())
     if tf is None:
-        raise ValueError(f"Timeframe '{timeframe}' non valido. Usa: {list(tf_map.keys())}")
+        raise ValueError(f"Invalid timeframe '{timeframe}'. Use: {list(tf_map.keys())}")
 
     mt5.symbol_select(symbol, True)
     rates = mt5.copy_rates_from_pos(symbol, tf, 0, count)
     if rates is None or len(rates) == 0:
-        raise RuntimeError(f"Nessun dato per {symbol} {timeframe}: {_last_error()}")
+        raise RuntimeError(f"No data for {symbol} {timeframe}: {_last_error()}")
 
     return [
         {
@@ -842,114 +842,114 @@ def get_ohlc(symbol: str, timeframe: str = "H1", count: int = 100) -> list[dict]
 
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="MT5 Trading CLI — Gestisci trade da riga di comando",
+        description="MT5 Trading CLI — Manage trades from the command line",
         formatter_class=argparse.RawTextHelpFormatter,
     )
-    sub = parser.add_subparsers(dest="command", help="Comando da eseguire")
+    sub = parser.add_subparsers(dest="command", help="Command to execute")
 
     # connect
-    p = sub.add_parser("connect", help="Connetti a MT5")
-    p.add_argument("--path", help="Percorso terminal64.exe")
-    p.add_argument("--login", type=int, help="Numero account")
-    p.add_argument("--password", help="Password account")
-    p.add_argument("--server", help="Nome server broker")
+    p = sub.add_parser("connect", help="Connect to MT5")
+    p.add_argument("--path", help="Path to terminal64.exe")
+    p.add_argument("--login", type=int, help="Account number")
+    p.add_argument("--password", help="Account password")
+    p.add_argument("--server", help="Broker server name")
 
     # disconnect
-    sub.add_parser("disconnect", help="Disconnetti da MT5")
+    sub.add_parser("disconnect", help="Disconnect from MT5")
 
     # account
-    sub.add_parser("account", help="Info account")
+    sub.add_parser("account", help="Account info")
 
     # symbol
-    p = sub.add_parser("symbol", help="Info simbolo")
-    p.add_argument("symbol", help="Nome simbolo (es. EURUSD)")
+    p = sub.add_parser("symbol", help="Symbol info")
+    p.add_argument("symbol", help="Symbol name (e.g. EURUSD)")
 
     # tick
-    p = sub.add_parser("tick", help="Ultimo tick")
-    p.add_argument("symbol", help="Nome simbolo")
+    p = sub.add_parser("tick", help="Latest tick")
+    p.add_argument("symbol", help="Symbol name")
 
     # ohlc
-    p = sub.add_parser("ohlc", help="Dati OHLC")
-    p.add_argument("symbol", help="Nome simbolo")
+    p = sub.add_parser("ohlc", help="OHLC data")
+    p.add_argument("symbol", help="Symbol name")
     p.add_argument("--timeframe", default="H1", help="Timeframe (M1,M5,M15,M30,H1,H4,D1,W1,MN1)")
-    p.add_argument("--count", type=int, default=20, help="Numero barre")
+    p.add_argument("--count", type=int, default=20, help="Number of bars")
 
     # positions
-    p = sub.add_parser("positions", help="Posizioni aperte")
-    p.add_argument("--symbol", help="Filtra per simbolo")
-    p.add_argument("--magic", type=int, help="Filtra per magic number")
+    p = sub.add_parser("positions", help="Open positions")
+    p.add_argument("--symbol", help="Filter by symbol")
+    p.add_argument("--magic", type=int, help="Filter by magic number")
 
     # pending
-    p = sub.add_parser("pending", help="Ordini pendenti")
-    p.add_argument("--symbol", help="Filtra per simbolo")
+    p = sub.add_parser("pending", help="Pending orders")
+    p.add_argument("--symbol", help="Filter by symbol")
 
     # buy / sell
     for cmd in ("buy", "sell"):
-        p = sub.add_parser(cmd, help=f"Ordine {cmd.upper()} a mercato")
-        p.add_argument("symbol", help="Simbolo")
-        p.add_argument("volume", type=float, help="Volume in lotti")
+        p = sub.add_parser(cmd, help=f"Market {cmd.upper()} order")
+        p.add_argument("symbol", help="Symbol")
+        p.add_argument("volume", type=float, help="Volume in lots")
         p.add_argument("--sl", type=float, default=0, help="Stop loss")
         p.add_argument("--tp", type=float, default=0, help="Take profit")
         p.add_argument("--magic", type=int, default=0, help="Magic number")
-        p.add_argument("--comment", default="", help="Commento")
+        p.add_argument("--comment", default="", help="Comment")
 
     # pending order
-    p = sub.add_parser("pending_order", help="Ordine pendente")
-    p.add_argument("symbol", help="Simbolo")
+    p = sub.add_parser("pending_order", help="Pending order")
+    p.add_argument("symbol", help="Symbol")
     p.add_argument("type", help="BUY_LIMIT, SELL_LIMIT, BUY_STOP, SELL_STOP")
     p.add_argument("volume", type=float, help="Volume")
-    p.add_argument("price", type=float, help="Prezzo ordine")
+    p.add_argument("price", type=float, help="Order price")
     p.add_argument("--sl", type=float, default=0, help="Stop loss")
     p.add_argument("--tp", type=float, default=0, help="Take profit")
     p.add_argument("--magic", type=int, default=0, help="Magic number")
-    p.add_argument("--comment", default="", help="Commento")
+    p.add_argument("--comment", default="", help="Comment")
 
     # close
-    p = sub.add_parser("close", help="Chiudi posizione")
-    p.add_argument("ticket", type=int, help="Ticket posizione")
-    p.add_argument("--volume", type=float, help="Volume parziale (ometti per chiusura totale)")
+    p = sub.add_parser("close", help="Close position")
+    p.add_argument("ticket", type=int, help="Position ticket")
+    p.add_argument("--volume", type=float, help="Partial volume (omit for full close)")
 
     # close_all
-    p = sub.add_parser("close_all", help="Chiudi tutte le posizioni")
-    p.add_argument("--symbol", help="Solo questo simbolo")
-    p.add_argument("--magic", type=int, help="Solo questo magic number")
+    p = sub.add_parser("close_all", help="Close all positions")
+    p.add_argument("--symbol", help="Only this symbol")
+    p.add_argument("--magic", type=int, help="Only this magic number")
 
     # cancel
-    p = sub.add_parser("cancel", help="Cancella ordine pendente")
-    p.add_argument("ticket", type=int, help="Ticket ordine")
+    p = sub.add_parser("cancel", help="Cancel pending order")
+    p.add_argument("ticket", type=int, help="Order ticket")
 
     # cancel_all
-    p = sub.add_parser("cancel_all", help="Cancella tutti gli ordini pendenti")
-    p.add_argument("--symbol", help="Solo questo simbolo")
+    p = sub.add_parser("cancel_all", help="Cancel all pending orders")
+    p.add_argument("--symbol", help="Only this symbol")
 
     # modify
-    p = sub.add_parser("modify", help="Modifica SL/TP posizione")
-    p.add_argument("ticket", type=int, help="Ticket posizione")
-    p.add_argument("--sl", type=float, help="Nuovo stop loss")
-    p.add_argument("--tp", type=float, help="Nuovo take profit")
+    p = sub.add_parser("modify", help="Modify position SL/TP")
+    p.add_argument("ticket", type=int, help="Position ticket")
+    p.add_argument("--sl", type=float, help="New stop loss")
+    p.add_argument("--tp", type=float, help="New take profit")
 
     # modify_pending
-    p = sub.add_parser("modify_pending", help="Modifica ordine pendente")
-    p.add_argument("ticket", type=int, help="Ticket ordine")
-    p.add_argument("--price", type=float, help="Nuovo prezzo")
-    p.add_argument("--sl", type=float, help="Nuovo SL")
-    p.add_argument("--tp", type=float, help="Nuovo TP")
+    p = sub.add_parser("modify_pending", help="Modify pending order")
+    p.add_argument("ticket", type=int, help="Order ticket")
+    p.add_argument("--price", type=float, help="New price")
+    p.add_argument("--sl", type=float, help="New SL")
+    p.add_argument("--tp", type=float, help="New TP")
 
     # trailing
-    p = sub.add_parser("trailing", help="Applica trailing stop")
-    p.add_argument("ticket", type=int, help="Ticket posizione")
-    p.add_argument("points", type=float, help="Distanza trailing in punti")
+    p = sub.add_parser("trailing", help="Apply trailing stop")
+    p.add_argument("ticket", type=int, help="Position ticket")
+    p.add_argument("points", type=float, help="Trailing distance in points")
 
     # breakeven
-    p = sub.add_parser("breakeven", help="Sposta SL a break-even")
-    p.add_argument("ticket", type=int, help="Ticket posizione")
-    p.add_argument("--offset", type=float, default=0, help="Punti extra oltre BE")
+    p = sub.add_parser("breakeven", help="Move SL to break-even")
+    p.add_argument("ticket", type=int, help="Position ticket")
+    p.add_argument("--offset", type=float, default=0, help="Extra points beyond BE")
 
     # lot_size
-    p = sub.add_parser("lot_size", help="Calcola lotto da rischio %")
-    p.add_argument("symbol", help="Simbolo")
-    p.add_argument("risk", type=float, help="Rischio percentuale (es. 1.0)")
-    p.add_argument("sl_points", type=float, help="Distanza SL in punti")
+    p = sub.add_parser("lot_size", help="Calculate lot size from risk %")
+    p.add_argument("symbol", help="Symbol")
+    p.add_argument("risk", type=float, help="Risk percentage (e.g. 1.0)")
+    p.add_argument("sl_points", type=float, help="SL distance in points")
 
     return parser
 

@@ -1,12 +1,12 @@
-# Regole di Monitoraggio MT5
+# MT5 Monitor Rules
 
-Documentazione completa di tutte le regole supportate da `mt5_monitor.py`.
+Complete documentation of all rules supported by `mt5_monitor.py`.
 
-## Struttura config
+## Config Structure
 
 ```json
 {
-  "description": "Descrizione opzionale",
+  "description": "Optional description",
   "interval_seconds": 30,
   "max_cycles": 0,
   "log_file": "mt5_monitor_log.json",
@@ -14,24 +14,25 @@ Documentazione completa di tutte le regole supportate da `mt5_monitor.py`.
 }
 ```
 
-Parametri globali:
-- `interval_seconds`: pausa tra un ciclo e l'altro (default: 30)
-- `max_cycles`: numero massimo di cicli, 0 = infinito (default: 0)
-- `log_file`: percorso file di log JSON (default: mt5_monitor_log.json)
+Global parameters:
 
-## Regole
+- `interval_seconds`: pause between cycles (default: 30)
+- `max_cycles`: maximum number of cycles, 0 = infinite (default: 0)
+- `log_file`: JSON log file path (default: mt5_monitor_log.json)
 
-Ogni regola è un oggetto JSON con almeno `name`, `type`, `enabled`.
+## Rules
+
+Every rule is a JSON object with at least `name`, `type`, `enabled`.
 
 ---
 
-### `trailing_stop` — Trailing stop automatico
+### `trailing_stop` — Automatic Trailing Stop
 
-Sposta lo SL seguendo il prezzo su tutte le posizioni in profitto.
+Moves the SL following the price on all profitable positions.
 
 ```json
 {
-  "name": "Trailing globale 20 pips",
+  "name": "Global trailing 20 pips",
   "type": "trailing_stop",
   "enabled": true,
   "trail_points": 200,
@@ -40,21 +41,21 @@ Sposta lo SL seguendo il prezzo su tutte le posizioni in profitto.
 }
 ```
 
-| Parametro | Tipo | Obbligatorio | Descrizione |
+| Parameter | Type | Required | Description |
 |-----------|------|:---:|-------------|
-| `trail_points` | float | ✅ | Distanza trailing in punti |
-| `symbol` | string | ❌ | Filtra per simbolo |
-| `magic` | int | ❌ | Filtra per magic number |
+| `trail_points` | float | Yes | Trailing distance in points |
+| `symbol` | string | No | Filter by symbol |
+| `magic` | int | No | Filter by magic number |
 
 ---
 
-### `breakeven` — Sposta a break-even
+### `breakeven` — Move to Break-Even
 
-Sposta lo SL al prezzo di apertura quando il profitto supera una soglia.
+Moves the SL to the opening price when profit exceeds a threshold.
 
 ```json
 {
-  "name": "BE su EURUSD dopo 15 pips",
+  "name": "BE on EURUSD after 15 pips",
   "type": "breakeven",
   "enabled": true,
   "symbol": "EURUSD",
@@ -63,17 +64,17 @@ Sposta lo SL al prezzo di apertura quando il profitto supera una soglia.
 }
 ```
 
-| Parametro | Tipo | Obbligatorio | Descrizione |
+| Parameter | Type | Required | Description |
 |-----------|------|:---:|-------------|
-| `min_profit_points` | float | ✅ | Profitto minimo in punti per attivare il BE |
-| `offset_points` | float | ❌ | Punti extra oltre il BE (default: 5) |
-| `symbol` | string | ❌ | Filtra per simbolo |
+| `min_profit_points` | float | Yes | Minimum profit in points to activate BE |
+| `offset_points` | float | No | Extra points beyond BE (default: 5) |
+| `symbol` | string | No | Filter by symbol |
 
 ---
 
-### `price_alert` — Alert su livello di prezzo
+### `price_alert` — Price Level Alert
 
-Notifica (e opzionalmente esegue un'azione) quando il prezzo raggiunge un livello.
+Notifies (and optionally executes an action) when price reaches a level.
 
 ```json
 {
@@ -94,25 +95,25 @@ Notifica (e opzionalmente esegue un'azione) quando il prezzo raggiunge un livell
 }
 ```
 
-| Parametro | Tipo | Obbligatorio | Descrizione |
+| Parameter | Type | Required | Description |
 |-----------|------|:---:|-------------|
-| `symbol` | string | ✅ | Simbolo da monitorare |
-| `level` | float | ✅ | Livello di prezzo |
-| `direction` | string | ❌ | `"above"` o `"below"` (default: above) |
-| `notify_desktop` | bool | ❌ | Notifica desktop Windows (default: false) |
-| `action` | object | ❌ | Azione da eseguire (formato strategy_executor) |
+| `symbol` | string | Yes | Symbol to monitor |
+| `level` | float | Yes | Price level |
+| `direction` | string | No | `"above"` or `"below"` (default: above) |
+| `notify_desktop` | bool | No | Windows desktop notification (default: false) |
+| `action` | object | No | Action to execute (strategy_executor format) |
 
-L'alert viene notificato **una sola volta** per sessione.
+The alert is triggered **only once** per session.
 
 ---
 
-### `close_on_profit` — Chiudi su profitto target
+### `close_on_profit` — Close on Target Profit
 
-Chiude posizioni che raggiungono un profitto in valuta account.
+Closes positions that reach a profit target in account currency.
 
 ```json
 {
-  "name": "TP a 50 EUR",
+  "name": "TP at 50 EUR",
   "type": "close_on_profit",
   "enabled": true,
   "target_profit": 50.0,
@@ -121,17 +122,17 @@ Chiude posizioni che raggiungono un profitto in valuta account.
 }
 ```
 
-| Parametro | Tipo | Obbligatorio | Descrizione |
+| Parameter | Type | Required | Description |
 |-----------|------|:---:|-------------|
-| `target_profit` | float | ✅ | Profitto target in valuta account |
-| `symbol` | string | ❌ | Filtra per simbolo |
-| `magic` | int | ❌ | Filtra per magic number |
+| `target_profit` | float | Yes | Target profit in account currency |
+| `symbol` | string | No | Filter by symbol |
+| `magic` | int | No | Filter by magic number |
 
 ---
 
-### `close_on_loss` — Chiudi su perdita massima
+### `close_on_loss` — Close on Maximum Loss
 
-Chiude posizioni che superano una perdita massima.
+Closes positions that exceed a maximum loss.
 
 ```json
 {
@@ -143,20 +144,20 @@ Chiude posizioni che superano una perdita massima.
 }
 ```
 
-| Parametro | Tipo | Obbligatorio | Descrizione |
+| Parameter | Type | Required | Description |
 |-----------|------|:---:|-------------|
-| `max_loss` | float | ✅ | Perdita massima in valuta account (valore positivo) |
-| `symbol` | string | ❌ | Filtra per simbolo |
+| `max_loss` | float | Yes | Maximum loss in account currency (positive value) |
+| `symbol` | string | No | Filter by symbol |
 
 ---
 
-### `close_on_time` — Chiudi a orario
+### `close_on_time` — Close at Time
 
-Chiude posizioni dopo un certo orario (ora locale del PC).
+Closes positions after a certain time (PC local time).
 
 ```json
 {
-  "name": "Chiusura serale",
+  "name": "Evening close",
   "type": "close_on_time",
   "enabled": true,
   "close_after": "21:30",
@@ -165,17 +166,17 @@ Chiude posizioni dopo un certo orario (ora locale del PC).
 }
 ```
 
-| Parametro | Tipo | Obbligatorio | Descrizione |
+| Parameter | Type | Required | Description |
 |-----------|------|:---:|-------------|
-| `close_after` | string | ✅ | Orario formato "HH:MM" |
-| `symbol` | string | ❌ | Filtra per simbolo |
-| `magic` | int | ❌ | Filtra per magic number |
+| `close_after` | string | Yes | Time in "HH:MM" format |
+| `symbol` | string | No | Filter by symbol |
+| `magic` | int | No | Filter by magic number |
 
 ---
 
-### `indicator_alert` — Alert su indicatori tecnici
+### `indicator_alert` — Technical Indicator Alert
 
-Alert basati su condizioni degli indicatori (richiede `mt5_indicators.py`).
+Alerts based on indicator conditions (requires `mt5_indicators.py`).
 
 ```json
 {
@@ -197,32 +198,33 @@ Alert basati su condizioni degli indicatori (richiede `mt5_indicators.py`).
 }
 ```
 
-| Parametro | Tipo | Obbligatorio | Descrizione |
+| Parameter | Type | Required | Description |
 |-----------|------|:---:|-------------|
-| `symbol` | string | ✅ | Simbolo |
-| `indicator` | string | ✅ | Tipo indicatore (vedi sotto) |
-| `timeframe` | string | ❌ | Timeframe (default: H1) |
-| `threshold` | float | ❌ | Soglia per RSI (default: 70/30) |
-| `notify_desktop` | bool | ❌ | Notifica desktop |
-| `action` | object | ❌ | Azione da eseguire |
+| `symbol` | string | Yes | Symbol |
+| `indicator` | string | Yes | Indicator type (see below) |
+| `timeframe` | string | No | Timeframe (default: H1) |
+| `threshold` | float | No | Threshold for RSI (default: 70/30) |
+| `notify_desktop` | bool | No | Desktop notification |
+| `action` | object | No | Action to execute |
 
-Indicatori supportati:
-- `rsi_overbought` — RSI sopra threshold (default 70)
-- `rsi_oversold` — RSI sotto threshold (default 30)
-- `macd_bullish_cross` — Istogramma MACD positivo
-- `macd_bearish_cross` — Istogramma MACD negativo
-- `bb_upper_breakout` — Prezzo sopra Bollinger upper
-- `bb_lower_breakout` — Prezzo sotto Bollinger lower
+Supported indicators:
+
+- `rsi_overbought` — RSI above threshold (default 70)
+- `rsi_oversold` — RSI below threshold (default 30)
+- `macd_bullish_cross` — Positive MACD histogram
+- `macd_bearish_cross` — Negative MACD histogram
+- `bb_upper_breakout` — Price above Bollinger upper
+- `bb_lower_breakout` — Price below Bollinger lower
 
 ---
 
-### `max_drawdown` — Protezione drawdown account
+### `max_drawdown` — Account Drawdown Protection
 
-Chiude TUTTE le posizioni se il drawdown dell'account supera una percentuale.
+Closes ALL positions if account drawdown exceeds a percentage.
 
 ```json
 {
-  "name": "Protezione drawdown 5%",
+  "name": "Drawdown protection 5%",
   "type": "max_drawdown",
   "enabled": true,
   "max_drawdown_percent": 5.0,
@@ -230,20 +232,20 @@ Chiude TUTTE le posizioni se il drawdown dell'account supera una percentuale.
 }
 ```
 
-| Parametro | Tipo | Obbligatorio | Descrizione |
+| Parameter | Type | Required | Description |
 |-----------|------|:---:|-------------|
-| `max_drawdown_percent` | float | ✅ | Percentuale massima di drawdown |
-| `close_all` | bool | ❌ | Se true, chiude tutte le posizioni (default: false = solo alert) |
+| `max_drawdown_percent` | float | Yes | Maximum drawdown percentage |
+| `close_all` | bool | No | If true, closes all positions (default: false = alert only) |
 
 ---
 
-## Esempi di configurazioni complete
+## Complete Configuration Examples
 
-### Day trader conservativo
+### Conservative Day Trader
 
 ```json
 {
-  "description": "Day trading con protezioni automatiche",
+  "description": "Day trading with automatic protections",
   "interval_seconds": 15,
   "rules": [
     {
@@ -253,14 +255,14 @@ Chiude TUTTE le posizioni se il drawdown dell'account supera una percentuale.
       "trail_points": 150
     },
     {
-      "name": "Break-even dopo 10 pips",
+      "name": "Break-even after 10 pips",
       "type": "breakeven",
       "enabled": true,
       "min_profit_points": 100,
       "offset_points": 5
     },
     {
-      "name": "Chiusura serale",
+      "name": "Evening close",
       "type": "close_on_time",
       "enabled": true,
       "close_after": "21:00"
@@ -276,27 +278,27 @@ Chiude TUTTE le posizioni se il drawdown dell'account supera una percentuale.
 }
 ```
 
-### Scalper aggressivo
+### Aggressive Scalper
 
 ```json
 {
-  "description": "Scalping con target fissi e protezione rapida",
+  "description": "Scalping with fixed targets and fast protection",
   "interval_seconds": 5,
   "rules": [
     {
-      "name": "TP a 20 EUR",
+      "name": "TP at 20 EUR",
       "type": "close_on_profit",
       "enabled": true,
       "target_profit": 20.0
     },
     {
-      "name": "SL a 10 EUR",
+      "name": "SL at 10 EUR",
       "type": "close_on_loss",
       "enabled": true,
       "max_loss": 10.0
     },
     {
-      "name": "BE rapido",
+      "name": "Fast BE",
       "type": "breakeven",
       "enabled": true,
       "min_profit_points": 50,
@@ -313,11 +315,11 @@ Chiude TUTTE le posizioni se il drawdown dell'account supera una percentuale.
 }
 ```
 
-### Swing trader con alert indicatori
+### Swing Trader with Indicator Alerts
 
 ```json
 {
-  "description": "Swing con alert tecnici e trailing ampio",
+  "description": "Swing with technical alerts and wide trailing",
   "interval_seconds": 60,
   "rules": [
     {

@@ -1,310 +1,310 @@
 ---
 name: mt5-trading
 description: >
-  Controlla MetaTrader 5 direttamente da Claude: apri, chiudi, modifica trade, gestisci ordini
-  pendenti, calcola lotti, applica trailing stop e break-even. Usa questa skill OGNI VOLTA che
-  l'utente menziona trading, MetaTrader, MT5, forex, apertura/chiusura posizioni, stop loss,
-  take profit, ordini, lotti, rischio percentuale, trailing stop, break-even, o descrive una
-  strategia di trading da eseguire. Anche se l'utente non dice esplicitamente "MT5", se parla
-  di trading su coppie valutarie, indici, materie prime, o descrive regole di entrata/uscita
-  dal mercato, questa skill è quella giusta.
+  Control MetaTrader 5 directly from Claude: open, close, modify trades, manage pending
+  orders, calculate lot sizes, apply trailing stop and break-even. Use this skill EVERY TIME
+  the user mentions trading, MetaTrader, MT5, forex, opening/closing positions, stop loss,
+  take profit, orders, lots, risk percentage, trailing stop, break-even, or describes a
+  trading strategy to execute. Even if the user doesn't explicitly say "MT5", if they talk
+  about trading currency pairs, indices, commodities, or describe entry/exit rules for
+  the market, this is the right skill.
 ---
 
 # MT5 Trading Skill
 
-Questa skill permette a Claude di operare come trader assistant su MetaTrader 5, eseguendo
-operazioni reali sul conto dell'utente tramite una libreria Python locale.
+This skill enables Claude to operate as a trading assistant on MetaTrader 5, executing
+real operations on the user's account via a local Python library.
 
-## Architettura
+## Architecture
 
 ```
 mt5-trading/
-├── SKILL.md                          ← Questo file (istruzioni per Claude)
+├── SKILL.md                          ← This file (instructions for Claude)
 ├── scripts/
-│   ├── mt5_trading.py                ← Libreria Python + CLI per MT5
-│   ├── mt5_strategy_executor.py      ← Esecutore di strategie JSON
-│   ├── mt5_indicators.py             ← Indicatori tecnici (RSI, MACD, BB, ATR, ADX...)
-│   └── mt5_monitor.py                ← Monitoraggio continuo con regole automatiche
+│   ├── mt5_trading.py                ← Python library + CLI for MT5
+│   ├── mt5_strategy_executor.py      ← JSON strategy executor
+│   ├── mt5_indicators.py             ← Technical indicators (RSI, MACD, BB, ATR, ADX...)
+│   └── mt5_monitor.py                ← Continuous monitoring with automatic rules
 └── references/
-    ├── strategy_format.md            ← Formato JSON delle strategie
-    └── monitor_rules.md              ← Documentazione regole di monitoraggio
+    ├── strategy_format.md            ← JSON strategy format
+    └── monitor_rules.md              ← Monitor rules documentation
 ```
 
-## Prerequisiti (PC dell'utente)
+## Prerequisites (user's PC)
 
-1. **Windows** con MetaTrader 5 installato e avviato
-2. **Python 3.9+** con il pacchetto `MetaTrader5`:
+1. **Windows** with MetaTrader 5 installed and running
+2. **Python 3.9+** with the `MetaTrader5` package:
    ```
    pip install MetaTrader5
    ```
-3. I file `mt5_trading.py` e `mt5_strategy_executor.py` copiati sul PC
-4. Il terminale MT5 deve essere aperto e loggato su un account (demo o reale)
+3. The `mt5_trading.py` and `mt5_strategy_executor.py` files copied to the PC
+4. The MT5 terminal must be open and logged into an account (demo or live)
 
-> **IMPORTANTE**: Questi script girano sul PC dell'utente, NON nel sandbox di Claude.
-> Claude genera i comandi/strategie, l'utente li esegue localmente.
+> **IMPORTANT**: These scripts run on the user's PC, NOT in Claude's sandbox.
+> Claude generates commands/strategies, the user executes them locally.
 
-## Come Claude deve operare
+## How Claude Should Operate
 
-### Flusso standard
+### Standard Flow
 
-1. **L'utente descrive cosa vuole fare** (in linguaggio naturale)
-2. **Claude traduce in comandi** usando la libreria `mt5_trading.py`
-3. **Claude presenta i comandi** pronti per essere eseguiti dall'utente
-4. **L'utente copia ed esegue** sul proprio PC
+1. **The user describes what they want to do** (in natural language)
+2. **Claude translates into commands** using the `mt5_trading.py` library
+3. **Claude presents the commands** ready for the user to execute
+4. **The user copies and executes** on their own PC
 
-### Due modalità di output
+### Two Output Modes
 
-#### Modalità A — Comandi CLI singoli
-Per operazioni semplici e dirette. Claude fornisce comandi `python mt5_trading.py ...`
+#### Mode A — Single CLI Commands
+For simple and direct operations. Claude provides `python mt5_trading.py ...` commands.
 
-Esempi:
+Examples:
 ```bash
-# Connetti
+# Connect
 python mt5_trading.py connect
 
-# Vedi account
+# View account
 python mt5_trading.py account
 
-# Compra 0.1 lotti EURUSD con SL e TP
+# Buy 0.1 lots EURUSD with SL and TP
 python mt5_trading.py buy EURUSD 0.1 --sl 1.0800 --tp 1.1000 --magic 1001
 
-# Chiudi posizione
+# Close position
 python mt5_trading.py close 123456
 
 # Trailing stop
 python mt5_trading.py trailing 123456 200
 
-# Calcola lotto per 1% di rischio con SL a 300 punti
+# Calculate lot for 1% risk with 300-point SL
 python mt5_trading.py lot_size EURUSD 1.0 300
 ```
 
-#### Modalità B — Strategia JSON
-Per operazioni complesse e multi-step. Claude genera un JSON e fornisce il comando
-per eseguirlo tramite `mt5_strategy_executor.py`.
+#### Mode B — JSON Strategy
+For complex multi-step operations. Claude generates a JSON and provides the command
+to execute it via `mt5_strategy_executor.py`.
 
 ```bash
-# Salva il JSON in un file
-# Poi esegui:
-python mt5_strategy_executor.py strategia.json
+# Save the JSON to a file
+# Then execute:
+python mt5_strategy_executor.py strategy.json
 
-# Oppure inline:
+# Or inline:
 python mt5_strategy_executor.py --inline '{ "actions": [...] }'
 ```
 
-Per il formato JSON completo, consulta: `references/strategy_format.md`
+For the complete JSON format, see: `references/strategy_format.md`
 
-## Regole fondamentali per Claude
+## Fundamental Rules for Claude
 
-### Sicurezza e conferma
+### Safety and Confirmation
 
-1. **MAI eseguire automaticamente** — Claude genera comandi, l'utente esegue
-2. **Sempre chiedere conferma** prima di generare ordini a mercato
-3. **Mostrare sempre un riepilogo** prima dell'esecuzione:
-   - Simbolo, direzione, volume
-   - Stop loss e take profit (in prezzo E in pips/punti)
-   - Rischio stimato in valuta e percentuale
-4. **Avvisare esplicitamente** se mancano SL o TP
-5. **Suggerire sempre l'uso di account demo** per test
+1. **NEVER execute automatically** — Claude generates commands, the user executes
+2. **Always ask for confirmation** before generating market orders
+3. **Always show a summary** before execution:
+   - Symbol, direction, volume
+   - Stop loss and take profit (in price AND pips/points)
+   - Estimated risk in currency and percentage
+4. **Explicitly warn** if SL or TP are missing
+5. **Always suggest using a demo account** for testing
 
-### Gestione del rischio
+### Risk Management
 
-Claude deve SEMPRE considerare il rischio:
+Claude must ALWAYS consider risk:
 
-- Se l'utente non specifica il volume, **calcolare il lotto** in base al rischio
-  (default: 1% del saldo per trade, salvo indicazioni diverse)
-- Se l'utente non specifica SL, **chiedere sempre** prima di procedere
-- Se il rischio supera il 2% per singolo trade, **avvisare** esplicitamente
-- Tenere traccia delle posizioni aperte nella conversazione
+- If the user doesn't specify volume, **calculate the lot** based on risk
+  (default: 1% of balance per trade, unless otherwise specified)
+- If the user doesn't specify SL, **always ask** before proceeding
+- If risk exceeds 2% per single trade, **warn** explicitly
+- Keep track of open positions in the conversation
 
-### Traduzione della strategia dell'utente
+### Translating the User's Strategy
 
-Quando l'utente descrive una strategia in linguaggio naturale, Claude deve:
+When the user describes a strategy in natural language, Claude must:
 
-1. **Ripetere la strategia** in modo strutturato per conferma
-2. **Identificare**: condizioni di entrata, uscita, gestione rischio
-3. **Tradurre** in azioni JSON o comandi CLI
-4. **Evidenziare** eventuali ambiguità o rischi
-5. **Proporre** miglioramenti (es. trailing stop se manca gestione attiva)
+1. **Restate the strategy** in a structured way for confirmation
+2. **Identify**: entry conditions, exit conditions, risk management
+3. **Translate** into JSON actions or CLI commands
+4. **Highlight** any ambiguities or risks
+5. **Suggest** improvements (e.g., trailing stop if active management is missing)
 
-### Esempio di conversazione tipo
+### Example Conversation
 
-**Utente**: "Voglio comprare EURUSD se rompe 1.1000, con stop a 30 pips e target 60 pips.
-Rischio 1% del conto."
+**User**: "I want to buy EURUSD if it breaks 1.1000, with a 30-pip stop and 60-pip target.
+Risk 1% of the account."
 
-**Claude deve**:
-1. Confermare la strategia:
-   - Entry: BUY_STOP a 1.1000
-   - SL: 1.0970 (30 pips sotto)
-   - TP: 1.1060 (60 pips sopra)
-   - Risk: 1% del saldo
-2. Generare prima il calcolo del lotto:
+**Claude should**:
+1. Confirm the strategy:
+   - Entry: BUY_STOP at 1.1000
+   - SL: 1.0970 (30 pips below)
+   - TP: 1.1060 (60 pips above)
+   - Risk: 1% of balance
+2. First generate the lot calculation:
    ```bash
    python mt5_trading.py lot_size EURUSD 1.0 300
    ```
-3. Poi l'ordine pendente (dopo aver il lotto):
+3. Then the pending order (after getting the lot):
    ```bash
-   python mt5_trading.py pending_order EURUSD BUY_STOP [LOTTO] 1.1000 --sl 1.0970 --tp 1.1060 --magic 1001 --comment "breakout_long"
+   python mt5_trading.py pending_order EURUSD BUY_STOP [LOT] 1.1000 --sl 1.0970 --tp 1.1060 --magic 1001 --comment "breakout_long"
    ```
 
-## Comandi CLI disponibili (riferimento rapido)
+## Available CLI Commands (quick reference)
 
-| Comando | Descrizione |
+| Command | Description |
 |---------|-------------|
-| `connect` | Connetti a MT5 |
-| `disconnect` | Disconnetti |
-| `account` | Info account (saldo, equity, margine) |
-| `symbol EURUSD` | Info simbolo (spread, digits, volumi) |
-| `tick EURUSD` | Ultimo prezzo bid/ask |
-| `ohlc EURUSD --timeframe H1 --count 20` | Candele OHLC |
-| `positions` | Posizioni aperte |
-| `pending` | Ordini pendenti |
-| `buy EURUSD 0.1 --sl X --tp Y` | Ordine BUY a mercato |
-| `sell EURUSD 0.1 --sl X --tp Y` | Ordine SELL a mercato |
-| `pending_order EURUSD BUY_LIMIT 0.1 1.0850 --sl X --tp Y` | Ordine pendente |
-| `close 123456` | Chiudi posizione (totale) |
-| `close 123456 --volume 0.05` | Chiusura parziale |
-| `close_all` | Chiudi tutto |
-| `close_all --symbol EURUSD` | Chiudi tutto su simbolo |
-| `cancel 789012` | Cancella ordine pendente |
-| `cancel_all` | Cancella tutti i pendenti |
-| `modify 123456 --sl 1.0850 --tp 1.1050` | Modifica SL/TP |
-| `modify_pending 789012 --price 1.0840` | Modifica ordine pendente |
-| `trailing 123456 200` | Trailing stop (200 punti) |
-| `breakeven 123456 --offset 10` | Sposta SL a break-even |
-| `lot_size EURUSD 1.0 300` | Calcola lotto (1% rischio, 300pt SL) |
+| `connect` | Connect to MT5 |
+| `disconnect` | Disconnect |
+| `account` | Account info (balance, equity, margin) |
+| `symbol EURUSD` | Symbol info (spread, digits, volumes) |
+| `tick EURUSD` | Latest bid/ask price |
+| `ohlc EURUSD --timeframe H1 --count 20` | OHLC candles |
+| `positions` | Open positions |
+| `pending` | Pending orders |
+| `buy EURUSD 0.1 --sl X --tp Y` | Market BUY order |
+| `sell EURUSD 0.1 --sl X --tp Y` | Market SELL order |
+| `pending_order EURUSD BUY_LIMIT 0.1 1.0850 --sl X --tp Y` | Pending order |
+| `close 123456` | Close position (full) |
+| `close 123456 --volume 0.05` | Partial close |
+| `close_all` | Close all |
+| `close_all --symbol EURUSD` | Close all for symbol |
+| `cancel 789012` | Cancel pending order |
+| `cancel_all` | Cancel all pending |
+| `modify 123456 --sl 1.0850 --tp 1.1050` | Modify SL/TP |
+| `modify_pending 789012 --price 1.0840` | Modify pending order |
+| `trailing 123456 200` | Trailing stop (200 points) |
+| `breakeven 123456 --offset 10` | Move SL to break-even |
+| `lot_size EURUSD 1.0 300` | Calculate lot (1% risk, 300pt SL) |
 
-Ogni comando stampa il risultato in JSON. Prefisso sempre con:
+Every command outputs the result in JSON. Always prefix with:
 ```
-python mt5_trading.py <comando>
+python mt5_trading.py <command>
 ```
 
-## Quando usare Modalità A vs B
+## When to Use Mode A vs B
 
-- **Modalità A (CLI)**: operazioni singole, query informative, modifiche rapide
-- **Modalità B (JSON strategy)**: strategie multi-step, setup complessi con più ordini,
-  sequenze che richiedono coordinazione (es. chiudi tutto → aspetta → riapri)
+- **Mode A (CLI)**: single operations, informational queries, quick modifications
+- **Mode B (JSON strategy)**: multi-step strategies, complex setups with multiple orders,
+  sequences requiring coordination (e.g., close all → wait → reopen)
 
-## Conversione pips ↔ punti
+## Pip ↔ Point Conversion
 
-- Forex 5 digits (es. EURUSD): 1 pip = 10 punti. Quindi 30 pips = 300 punti
-- Forex 3 digits (es. USDJPY): 1 pip = 10 punti. Quindi 30 pips = 300 punti
-- Indici/metalli: dipende dal simbolo, Claude deve sempre verificare con `symbol_info`
-- **IMPORTANTE**: la libreria lavora in punti. Claude deve convertire se l'utente parla in pips.
+- Forex 5 digits (e.g., EURUSD): 1 pip = 10 points. So 30 pips = 300 points
+- Forex 3 digits (e.g., USDJPY): 1 pip = 10 points. So 30 pips = 300 points
+- Indices/metals: depends on the symbol, Claude should always verify with `symbol_info`
+- **IMPORTANT**: the library works in points. Claude must convert if the user speaks in pips.
 
-## Errori comuni e soluzioni
+## Common Errors and Solutions
 
-| Errore | Causa | Soluzione |
-|--------|-------|-----------|
-| `MT5 non inizializzato` | Terminale non avviato | `python mt5_trading.py connect` |
-| `Simbolo non trovato` | Simbolo non disponibile | Verificare nome esatto col broker |
-| `Volume non valido` | Lotto fuori range | Controllare con `symbol_info` i limiti |
-| `Ordine rifiutato [10013]` | Mercato chiuso | Verificare orari di trading |
-| `Ordine rifiutato [10016]` | SL/TP non valido | SL/TP troppo vicino al prezzo |
-| `Margine insufficiente` | Fondi insufficienti | Ridurre volume o chiudere posizioni |
+| Error | Cause | Solution |
+|-------|-------|----------|
+| `MT5 not initialized` | Terminal not started | `python mt5_trading.py connect` |
+| `Symbol not found` | Symbol unavailable | Check exact name with broker |
+| `Invalid volume` | Lot out of range | Check limits with `symbol_info` |
+| `Order rejected [10013]` | Market closed | Check trading hours |
+| `Order rejected [10016]` | Invalid SL/TP | SL/TP too close to price |
+| `Insufficient margin` | Insufficient funds | Reduce volume or close positions |
 
-## Modalità C — Analisi tecnica con indicatori
+## Mode C — Technical Analysis with Indicators
 
-Lo script `mt5_indicators.py` fornisce indicatori tecnici calcolati direttamente sui dati MT5.
-Claude deve usarlo PRIMA di suggerire trade, per supportare le decisioni con dati oggettivi.
+The `mt5_indicators.py` script provides technical indicators calculated directly on MT5 data.
+Claude should use it BEFORE suggesting trades, to support decisions with objective data.
 
-### Comandi indicatori
+### Indicator Commands
 
 ```bash
-# Analisi completa (tutti gli indicatori + segnali + bias)
+# Full analysis (all indicators + signals + bias)
 python mt5_indicators.py EURUSD --analysis
 
-# Indicatori specifici
+# Specific indicators
 python mt5_indicators.py EURUSD --indicators rsi macd bbands atr
 
-# Pivot points giornalieri
+# Daily pivot points
 python mt5_indicators.py EURUSD --pivots classic
 python mt5_indicators.py EURUSD --pivots fibonacci
 python mt5_indicators.py EURUSD --pivots camarilla
 
-# Timeframe diverso
+# Different timeframe
 python mt5_indicators.py XAUUSD --analysis --timeframe M15
 ```
 
-### Indicatori disponibili
+### Available Indicators
 
-| Indicatore | Chiave CLI | Output |
-|-----------|-----------|--------|
-| SMA (20, 50, 200) | `sma` | Medie mobili semplici |
-| EMA (12, 26) | `ema` | Medie mobili esponenziali |
-| RSI (14) | `rsi` | Indice forza relativa (0-100) |
-| MACD (12,26,9) | `macd` | Linea, segnale, istogramma |
+| Indicator | CLI Key | Output |
+|-----------|---------|--------|
+| SMA (20, 50, 200) | `sma` | Simple moving averages |
+| EMA (12, 26) | `ema` | Exponential moving averages |
+| RSI (14) | `rsi` | Relative strength index (0-100) |
+| MACD (12,26,9) | `macd` | Line, signal, histogram |
 | Bollinger Bands (20,2) | `bbands` | Upper, middle, lower |
-| ATR (14) | `atr` | Volatilità media |
-| Stochastic (14,3) | `stoch` | %K e %D (0-100) |
-| ADX (14) | `adx` | Forza trend + DI+/DI- |
+| ATR (14) | `atr` | Average volatility |
+| Stochastic (14,3) | `stoch` | %K and %D (0-100) |
+| ADX (14) | `adx` | Trend strength + DI+/DI- |
 | Pivot Points | `--pivots` | Classic, Fibonacci, Camarilla |
 
-### Come Claude usa l'analisi
+### How Claude Uses Analysis
 
-L'output di `--analysis` include un campo `overall_bias` (BULLISH / BEARISH / NEUTRAL) e
-una lista `signals` con ogni indicatore e il suo segnale. Claude deve:
+The `--analysis` output includes an `overall_bias` field (BULLISH / BEARISH / NEUTRAL) and
+a `signals` list with each indicator and its signal. Claude should:
 
-1. **Eseguire l'analisi** prima di proporre un trade
-2. **Citare gli indicatori** che supportano la decisione
-3. **Avvisare** se i segnali sono contrastanti
-4. **Usare l'ATR** per calcolare SL/TP proporzionati alla volatilità
+1. **Run the analysis** before proposing a trade
+2. **Cite the indicators** that support the decision
+3. **Warn** if signals are conflicting
+4. **Use ATR** to calculate SL/TP proportional to volatility
 
-Esempio di workflow per Claude:
-- Utente: "Cosa ne pensi di un long su EURUSD?"
-- Claude genera: `python mt5_indicators.py EURUSD --analysis`
-- Claude legge il JSON e risponde: "RSI a 45 (neutro), MACD bullish, prezzo sopra SMA200.
-  Bias complessivo: moderatamente bullish. ATR a 80 punti, suggerisco SL a 120pt e TP a 160pt."
+Example workflow for Claude:
+- User: "What do you think about going long on EURUSD?"
+- Claude generates: `python mt5_indicators.py EURUSD --analysis`
+- Claude reads the JSON and responds: "RSI at 45 (neutral), MACD bullish, price above SMA200.
+  Overall bias: moderately bullish. ATR at 80 points, I suggest SL at 120pt and TP at 160pt."
 
-## Modalità D — Monitoraggio continuo
+## Mode D — Continuous Monitoring
 
-Lo script `mt5_monitor.py` gira in loop sul PC dell'utente e applica regole automatiche.
-Claude genera la configurazione JSON, l'utente la esegue.
+The `mt5_monitor.py` script runs in a loop on the user's PC and applies automatic rules.
+Claude generates the JSON configuration, the user executes it.
 
-### Comandi monitor
+### Monitor Commands
 
 ```bash
-# Genera una config di esempio
+# Generate an example config
 python mt5_monitor.py --generate-config
 
-# Avvia il monitor
+# Start the monitor
 python mt5_monitor.py mt5_monitor_config.json
 
-# Modalità simulazione (non esegue azioni reali)
+# Simulation mode (doesn't execute real actions)
 python mt5_monitor.py mt5_monitor_config.json --dry-run
 
-# Override intervallo
+# Override interval
 python mt5_monitor.py mt5_monitor_config.json --interval 10
 ```
 
-### Tipi di regole disponibili
+### Available Rule Types
 
-| Tipo | Descrizione |
+| Type | Description |
 |------|-------------|
-| `trailing_stop` | Trailing stop automatico su posizioni in profitto |
-| `breakeven` | Sposta SL a break-even quando il profitto supera una soglia |
-| `price_alert` | Notifica quando il prezzo supera/scende sotto un livello |
-| `close_on_profit` | Chiude posizione al raggiungimento di un profitto target (€) |
-| `close_on_loss` | Chiude posizione se la perdita supera un limite (€) |
-| `close_on_time` | Chiude posizioni dopo un orario specificato (HH:MM) |
-| `indicator_alert` | Alert basati su indicatori (RSI, MACD cross, Bollinger breakout) |
-| `max_drawdown` | Chiude TUTTO se il drawdown dell'account supera una percentuale |
+| `trailing_stop` | Automatic trailing stop on profitable positions |
+| `breakeven` | Move SL to break-even when profit exceeds a threshold |
+| `price_alert` | Notify when price crosses above/below a level |
+| `close_on_profit` | Close position when target profit is reached (currency) |
+| `close_on_loss` | Close position when loss exceeds a limit (currency) |
+| `close_on_time` | Close positions after a specified time (HH:MM) |
+| `indicator_alert` | Alerts based on indicators (RSI, MACD cross, Bollinger breakout) |
+| `max_drawdown` | Close ALL if account drawdown exceeds a percentage |
 
-### Come Claude genera configurazioni monitor
+### How Claude Generates Monitor Configurations
 
-Quando l'utente descrive regole di gestione automatica, Claude deve:
+When the user describes automatic management rules, Claude should:
 
-1. **Tradurre** le regole in formato JSON del monitor
-2. **Suggerire `--dry-run`** per il primo test
-3. **Includere sempre** la regola `max_drawdown` come protezione
-4. **Spiegare** cosa farà ogni regola
+1. **Translate** the rules into the monitor JSON format
+2. **Suggest `--dry-run`** for the first test
+3. **Always include** the `max_drawdown` rule as protection
+4. **Explain** what each rule will do
 
-Esempio:
-- Utente: "Voglio che le mie posizioni vengano protette automaticamente:
-  trailing stop a 20 pips, break-even dopo 15 pips di profitto,
-  e chiudi tutto se perdo più del 3%"
-- Claude genera un JSON config con 3 regole e la salva come file
+Example:
+- User: "I want my positions protected automatically:
+  trailing stop at 20 pips, break-even after 15 pips of profit,
+  and close everything if I lose more than 3%"
+- Claude generates a JSON config with 3 rules and saves it as a file
 
-### Struttura config monitor
+### Monitor Config Structure
 
 ```json
 {
@@ -312,7 +312,7 @@ Esempio:
   "log_file": "mt5_monitor_log.json",
   "rules": [
     {
-      "name": "Nome descrittivo",
+      "name": "Descriptive name",
       "type": "trailing_stop",
       "enabled": true,
       "trail_points": 200,
@@ -322,12 +322,12 @@ Esempio:
 }
 ```
 
-Per la documentazione completa delle regole, consultare: `references/monitor_rules.md`
+For the complete rules documentation, see: `references/monitor_rules.md`
 
-### Alert con azioni automatiche
+### Alerts with Automatic Actions
 
-Le regole `price_alert` e `indicator_alert` possono includere un'azione da eseguire
-automaticamente quando l'alert scatta:
+The `price_alert` and `indicator_alert` rules can include an action to execute
+automatically when the alert triggers:
 
 ```json
 {
@@ -346,23 +346,23 @@ automaticamente quando l'alert scatta:
 }
 ```
 
-## Flusso decisionale completo per Claude
+## Complete Decision Flow for Claude
 
-Quando l'utente chiede un trade o una strategia, Claude segue questo flusso:
+When the user asks for a trade or strategy, Claude follows this flow:
 
-1. **Analisi** → `python mt5_indicators.py SYMBOL --analysis`
-2. **Account** → `python mt5_trading.py account` (per saldo e margine)
-3. **Calcolo lotto** → `python mt5_trading.py lot_size SYMBOL RISK SL_POINTS`
-4. **Riepilogo** → Presenta all'utente: indicatori, direzione, volume, SL, TP, rischio
-5. **Conferma** → Attendi OK dall'utente
-6. **Esecuzione** → Genera il comando/strategia
-7. **Monitoraggio** → Proponi config monitor se servono regole automatiche
+1. **Analysis** → `python mt5_indicators.py SYMBOL --analysis`
+2. **Account** → `python mt5_trading.py account` (for balance and margin)
+3. **Lot calculation** → `python mt5_trading.py lot_size SYMBOL RISK SL_POINTS`
+4. **Summary** → Present to user: indicators, direction, volume, SL, TP, risk
+5. **Confirmation** → Wait for user OK
+6. **Execution** → Generate the command/strategy
+7. **Monitoring** → Suggest monitor config if automatic rules are needed
 
-## Note importanti
+## Important Notes
 
-- Gli output sono **sempre in JSON** per parsing facile
-- Il **magic number** identifica la strategia (utile per gestire più strategie)
-- Claude deve suggerire magic numbers diversi per strategie diverse
-- Se l'utente chiede dati OHLC o tick, Claude li analizza per supportare decisioni
-- Il monitor scrive un log in `mt5_monitor_log.json` consultabile in qualsiasi momento
-- Premere `Ctrl+C` per fermare il monitor in modo pulito
+- Outputs are **always in JSON** for easy parsing
+- The **magic number** identifies the strategy (useful for managing multiple strategies)
+- Claude should suggest different magic numbers for different strategies
+- If the user asks for OHLC or tick data, Claude analyzes them to support decisions
+- The monitor writes a log to `mt5_monitor_log.json` that can be checked at any time
+- Press `Ctrl+C` to stop the monitor cleanly

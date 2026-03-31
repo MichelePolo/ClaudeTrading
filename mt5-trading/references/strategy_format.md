@@ -1,12 +1,12 @@
-# Formato JSON Strategia MT5
+# MT5 Strategy JSON Format
 
-Questo documento descrive il formato JSON che Claude deve generare per eseguire strategie di trading su MetaTrader 5.
+This document describes the JSON format that Claude must generate to execute trading strategies on MetaTrader 5.
 
-## Struttura base
+## Base Structure
 
 ```json
 {
-  "description": "Descrizione della strategia",
+  "description": "Strategy description",
   "risk_rules": {
     "max_risk_per_trade": 1.0,
     "max_open_positions": 5,
@@ -20,16 +20,16 @@ Questo documento descrive il formato JSON che Claude deve generare per eseguire 
 }
 ```
 
-## Azioni disponibili
+## Available Actions
 
-### Connessione
+### Connection
 ```json
 { "action": "connect" }
 { "action": "connect", "login": 12345, "password": "xxx", "server": "BrokerName-Demo" }
 { "action": "disconnect" }
 ```
 
-### Informazioni
+### Information
 ```json
 { "action": "account_info" }
 { "action": "symbol_info", "symbol": "EURUSD" }
@@ -40,7 +40,7 @@ Questo documento descrive il formato JSON che Claude deve generare per eseguire 
 { "action": "get_pending_orders" }
 ```
 
-### Ordini a mercato
+### Market Orders
 ```json
 {
   "action": "buy",
@@ -61,7 +61,7 @@ Questo documento descrive il formato JSON che Claude deve generare per eseguire 
 }
 ```
 
-### Ordini pendenti
+### Pending Orders
 ```json
 {
   "action": "pending_order",
@@ -74,9 +74,9 @@ Questo documento descrive il formato JSON che Claude deve generare per eseguire 
   "magic": 1001
 }
 ```
-Tipi: `BUY_LIMIT`, `SELL_LIMIT`, `BUY_STOP`, `SELL_STOP`
+Types: `BUY_LIMIT`, `SELL_LIMIT`, `BUY_STOP`, `SELL_STOP`
 
-### Chiusura
+### Close Positions
 ```json
 { "action": "close", "ticket": 123456 }
 { "action": "close", "ticket": 123456, "volume": 0.05 }
@@ -85,20 +85,20 @@ Tipi: `BUY_LIMIT`, `SELL_LIMIT`, `BUY_STOP`, `SELL_STOP`
 { "action": "close_all", "magic": 1001 }
 ```
 
-### Cancellazione ordini pendenti
+### Cancel Pending Orders
 ```json
 { "action": "cancel", "ticket": 789012 }
 { "action": "cancel_all" }
 { "action": "cancel_all", "symbol": "EURUSD" }
 ```
 
-### Modifica
+### Modify
 ```json
 { "action": "modify", "ticket": 123456, "sl": 1.0850, "tp": 1.1050 }
 { "action": "modify_pending", "ticket": 789012, "price": 1.0840, "sl": 1.0790 }
 ```
 
-### Gestione rischio
+### Risk Management
 ```json
 { "action": "trailing_stop", "ticket": 123456, "trail_points": 200 }
 { "action": "breakeven", "ticket": 123456, "offset_points": 10 }
@@ -110,16 +110,16 @@ Tipi: `BUY_LIMIT`, `SELL_LIMIT`, `BUY_STOP`, `SELL_STOP`
 { "action": "wait", "seconds": 2 }
 ```
 
-## Flag speciali per azione
+## Special Action Flags
 
-- `"stop_on_error": true` — interrompe l'esecuzione della strategia se questa azione fallisce.
+- `"stop_on_error": true` — stops strategy execution if this action fails.
 
-## Esempi di strategie complete
+## Complete Strategy Examples
 
-### Strategia: Breakout con rischio controllato
+### Strategy: Breakout with Controlled Risk
 ```json
 {
-  "description": "Breakout EURUSD sopra 1.1000 con rischio 1%",
+  "description": "EURUSD breakout above 1.1000 with 1% risk",
   "actions": [
     { "action": "connect", "stop_on_error": true },
     { "action": "account_info" },
@@ -139,10 +139,10 @@ Tipi: `BUY_LIMIT`, `SELL_LIMIT`, `BUY_STOP`, `SELL_STOP`
 }
 ```
 
-### Strategia: Chiudi tutto e riposiziona
+### Strategy: Close All and Reposition
 ```json
 {
-  "description": "Chiudi posizioni EURUSD e apri sell con trailing",
+  "description": "Close EURUSD positions and open sell with trailing",
   "actions": [
     { "action": "connect", "stop_on_error": true },
     { "action": "close_all", "symbol": "EURUSD" },
@@ -159,10 +159,10 @@ Tipi: `BUY_LIMIT`, `SELL_LIMIT`, `BUY_STOP`, `SELL_STOP`
 }
 ```
 
-### Strategia: Gestione posizioni attive
+### Strategy: Manage Active Positions
 ```json
 {
-  "description": "Sposta tutte le posizioni in profitto a break-even",
+  "description": "Move all profitable positions to break-even",
   "actions": [
     { "action": "connect", "stop_on_error": true },
     { "action": "get_positions" },
