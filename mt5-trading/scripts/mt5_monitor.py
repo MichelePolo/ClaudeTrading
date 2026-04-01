@@ -186,6 +186,8 @@ class MonitorEngine:
             self._rule_indicator_alert(rule)
         elif rule_type == "max_drawdown":
             self._rule_max_drawdown(rule, positions)
+        elif rule_type == "tema_price_cross":
+            self._rule_tema_price_cross(rule)
         else:
             self.log.log("WARN", f"Unknown rule type: {rule_type}")
 
@@ -395,6 +397,106 @@ class MonitorEngine:
                     result = execute_action(rule["action"])
                     self.log.log("INFO", f"  → Result", result)
 
+    # — TEMA / Price crossover —
+    def _rule_tema_price_cross(self, rule: dict):
+        """Opens a trade whenever the TEMA crosses the price line.
+
+        Config keys:
+          symbol        – e.g. "EURUSD"
+          timeframe     – default "H1"
+          tema_period   – TEMA period, default 20
+          volume        – lot size, default 0.01
+          sl_points     – stop-loss in points, default 0 (no SL)
+          tp_points     – take-profit in points, default 0 (no TP)
+          magic         – magic number, default 0
+          close_opposite – if true, close existing opposite position before opening, default true
+          comment       – order comment
+        """
+        if not HAS_INDICATORS:
+            self.log.log("WARN", "mt5_indicators not available for tema_price_cross")
+            return
+
+        symbol = rule["symbol"]
+        timeframe = rule.get("timeframe", "H1")
+        period = rule.get("tema_period", 20)
+        volume = rule.get("volume", 0.01)
+        sl_points = rule.get("sl_points", 0)
+        tp_points = rule.get("tp_points", 0)
+        magic = rule.get("magic", 0)
+        comment = rule.get("comment", "tema_cross")
+        close_opposite = rule.get("close_opposite", True)
+
+        # Need at least 2 bars to detect a crossover
+        count = max(period * 3 + 10, 100)
+        bars = mt5t.get_ohlc(symbol, timeframe, count)
+        if len(bars) < 2:
+            self.log.log("WARN", f"tema_price_cross: not enough bars for {symbol}")
+            return
+
+        closes = [b["close"] for b in bars]
+        tema_values = indicators.tema(closes, period)
+
+        # Use the last two closed bars for crossover detection
+        prev_close = closes[-2]
+        curr_close = closes[-1]
+        prev_tema = tema_values[-2]
+        curr_tema = tema_values[-1]
+
+        if prev_tema is None or curr_tema is None:
+            self.log.log("WARN", f"tema_price_cross: insufficient TEMA data for {symbol}")
+            return
+
+        bullish_cross = prev_close <= prev_tema and curr_close > curr_tema
+        bearish_cross = prev_close >= prev_tema and curr_close < curr_tema
+
+        if not bullish_cross and not bearish_cross:
+            return  # No crossover this cycle
+
+        direction = "BUY" if bullish_cross else "SELL"
+        cross_type = "bullish" if bullish_cross else "bearish"
+        self.log.log(
+            "ALERT",
+            f"TEMA cross ({cross_type}) on {symbol} {timeframe}: "
+            f"price={curr_close:.5f} TEMA({period})={curr_tema:.5f} → {direction}",
+        )
+
+        if self.dry_run:
+            return
+
+        # Optionally close the opposite position
+        if close_opposite:
+            opposite = "SELL" if direction == "BUY" else "BUY"
+            positions = mt5t.get_positions(symbol=symbol)
+            for pos in positions:
+                if pos.get("type") == opposite and (magic == 0 or pos.get("magic") == magic):
+                    result = mt5t.close_position(pos["ticket"])
+                    self.log.log("ACTION", f"Closed opposite {opposite} #{pos['ticket']}: {result.get('status')}")
+
+        # Calculate SL / TP prices
+        tick = mt5t.get_tick(symbol)
+        info = mt5t.symbol_info(symbol)
+        point = info.get("point", 0.00001)
+
+        if direction == "BUY":
+            price = tick["ask"]
+            sl = round(price - sl_points * point, info.get("digits", 5)) if sl_points else 0
+            tp = round(price + tp_points * point, info.get("digits", 5)) if tp_points else 0
+        else:
+            price = tick["bid"]
+            sl = round(price + sl_points * point, info.get("digits", 5)) if sl_points else 0
+            tp = round(price - tp_points * point, info.get("digits", 5)) if tp_points else 0
+
+        result = mt5t.open_market_order(
+            symbol=symbol,
+            direction=direction,
+            volume=volume,
+            sl=sl,
+            tp=tp,
+            magic=magic,
+            comment=comment,
+        )
+        self.log.log("ACTION", f"Opened {direction} {symbol} vol={volume}: {result.get('status', 'unknown')}", result)
+
     # — Max Drawdown —
     def _rule_max_drawdown(self, rule: dict, positions: list[dict]):
         max_dd_percent = rule["max_drawdown_percent"]
@@ -481,6 +583,21 @@ EXAMPLE_CONFIG = {
             "threshold": 75,
             "notify_desktop": True,
             "comment": "Alert when RSI > 75"
+        },
+        {
+            "name": "TEMA/Price crossover EURUSD H1",
+            "type": "tema_price_cross",
+            "enabled": False,
+            "symbol": "EURUSD",
+            "timeframe": "H1",
+            "tema_period": 20,
+            "volume": 0.01,
+            "sl_points": 200,
+            "tp_points": 400,
+            "magic": 1001,
+            "close_opposite": True,
+            "comment": "tema_cross_h1",
+            "comment_doc": "BUY when price crosses above TEMA(20), SELL when price crosses below"
         },
         {
             "name": "Max drawdown 5%",

@@ -88,6 +88,45 @@ def ema(values: list[float], period: int) -> list[Optional[float]]:
     return result
 
 
+def tema(values: list[float], period: int) -> list[Optional[float]]:
+    """Triple Exponential Moving Average (TEMA).
+
+    Formula: TEMA = 3*EMA1 - 3*EMA2 + EMA3
+    where EMA2 = EMA(EMA1) and EMA3 = EMA(EMA2).
+
+    Reduces lag compared to a standard EMA.
+    """
+    ema1 = ema(values, period)
+
+    # EMA2 = EMA of EMA1 (only valid values)
+    valid1 = [v for v in ema1 if v is not None]
+    if len(valid1) < period:
+        return [None] * len(values)
+    ema2_raw = ema(valid1, period)
+
+    valid2 = [v for v in ema2_raw if v is not None]
+    if len(valid2) < period:
+        return [None] * len(values)
+    ema3_raw = ema(valid2, period)
+
+    # Remap EMA2 and EMA3 back to original length
+    offset1 = len(values) - len(valid1)
+    ema2 = [None] * len(values)
+    for i, v in enumerate(ema2_raw):
+        ema2[i + offset1] = v
+
+    offset2 = len(values) - len(valid2)
+    ema3 = [None] * len(values)
+    for i, v in enumerate(ema3_raw):
+        ema3[i + offset2] = v
+
+    result = [None] * len(values)
+    for i in range(len(values)):
+        if ema1[i] is not None and ema2[i] is not None and ema3[i] is not None:
+            result[i] = 3 * ema1[i] - 3 * ema2[i] + ema3[i]
+    return result
+
+
 # ──────────────────────────────────────────────
 #  RSI
 # ──────────────────────────────────────────────
@@ -411,6 +450,7 @@ def get_analysis(
     sma_200 = sma(closes, 200)
     ema_12 = ema(closes, 12)
     ema_26 = ema(closes, 26)
+    tema_20 = tema(closes, 20)
 
     # Current values (latest available)
     current = closes[-1]
@@ -503,6 +543,7 @@ def get_analysis(
             "sma_200": round(sma_200[-1], 5) if sma_200[-1] else None,
             "ema_12": round(ema_12[-1], 5) if ema_12[-1] else None,
             "ema_26": round(ema_26[-1], 5) if ema_26[-1] else None,
+            "tema_20": round(tema_20[-1], 5) if tema_20[-1] else None,
             "rsi_14": round(current_rsi, 2) if current_rsi else None,
             "macd": round(current_macd, 6) if current_macd else None,
             "macd_signal": round(current_signal, 6) if current_signal else None,
