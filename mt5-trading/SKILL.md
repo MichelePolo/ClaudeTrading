@@ -23,7 +23,7 @@ mt5-trading/
 ├── scripts/
 │   ├── mt5_trading.py                ← Python library + CLI for MT5
 │   ├── mt5_strategy_executor.py      ← JSON strategy executor
-│   ├── mt5_indicators.py             ← Technical indicators (RSI, MACD, BB, ATR, ADX...)
+│   ├── mt5_indicators.py             ← Technical indicators (RSI, MACD, BB, ATR, ADX, TEMA...)
 │   └── mt5_monitor.py                ← Continuous monitoring with automatic rules
 └── references/
     ├── strategy_format.md            ← JSON strategy format
@@ -231,6 +231,7 @@ python mt5_indicators.py XAUUSD --analysis --timeframe M15
 |-----------|---------|--------|
 | SMA (20, 50, 200) | `sma` | Simple moving averages |
 | EMA (12, 26) | `ema` | Exponential moving averages |
+| TEMA (20) | `tema` | Triple EMA — low-lag trend filter |
 | RSI (14) | `rsi` | Relative strength index (0-100) |
 | MACD (12,26,9) | `macd` | Line, signal, histogram |
 | Bollinger Bands (20,2) | `bbands` | Upper, middle, lower |
@@ -287,6 +288,7 @@ python mt5_monitor.py mt5_monitor_config.json --interval 10
 | `close_on_loss` | Close position when loss exceeds a limit (currency) |
 | `close_on_time` | Close positions after a specified time (HH:MM) |
 | `indicator_alert` | Alerts based on indicators (RSI, MACD cross, Bollinger breakout) |
+| `tema_price_cross` | Open trade on TEMA/price crossover (auto close opposite) |
 | `max_drawdown` | Close ALL if account drawdown exceeds a percentage |
 
 ### How Claude Generates Monitor Configurations
@@ -345,6 +347,29 @@ automatically when the alert triggers:
   }
 }
 ```
+
+### TEMA / Price Crossover Rule
+
+The `tema_price_cross` rule opens trades automatically on TEMA/price crossovers:
+
+```json
+{
+  "type": "tema_price_cross",
+  "symbol": "EURUSD",
+  "timeframe": "H1",
+  "tema_period": 20,
+  "volume": 0.01,
+  "sl_points": 200,
+  "tp_points": 400,
+  "magic": 1001,
+  "close_opposite": true,
+  "comment": "tema_cross_h1"
+}
+```
+
+- **BUY** when price crosses above TEMA, **SELL** when below
+- `close_opposite: true` closes existing opposite positions before opening
+- TEMA (Triple EMA) reduces lag vs standard EMA, giving faster crossover signals
 
 ## Complete Decision Flow for Claude
 

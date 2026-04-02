@@ -9,6 +9,7 @@ Features:
   - Price level alerts (breakout / breakdown)
   - Automatic close on conditions (max profit, max loss, time)
   - Technical indicator alerts (RSI overbought/oversold, MACD cross)
+  - TEMA/price crossover detection with automatic trade execution
   - Logging of all actions to a JSON file
   - Optional desktop notifications (Windows toast)
 

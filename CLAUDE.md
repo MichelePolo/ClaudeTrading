@@ -4,6 +4,17 @@
 
 This is a Claude Code skill (`mt5-trading`) that enables Claude to act as a MetaTrader 5 trading assistant. Claude generates CLI commands and JSON strategies; the user executes them locally on their Windows PC.
 
+## Documentation Rule
+
+**MANDATORY**: When adding, modifying, or removing features, indicators, monitor rules, or CLI commands, you MUST update ALL related documentation and code comments in the same change. This includes:
+- `CLAUDE.md` — File Structure, Decision Flow, and any relevant sections
+- `mt5-trading/SKILL.md` — Architecture tree, indicator/rule tables, CLI reference, examples
+- `README.md` — Feature list, command tables, monitor rules table
+- `mt5-trading/references/monitor_rules.md` — Rule docs (if monitor rules are affected)
+- Code docstrings in the affected scripts (indicator lists, feature lists, CLI usage examples)
+
+Never ship code changes without the corresponding doc updates. If in doubt, grep for the old name/feature across all `.md` files and all script docstrings to ensure nothing is missed.
+
 ## Key Constraints
 
 - **Claude NEVER auto-executes trades** — always generate commands for the user to run

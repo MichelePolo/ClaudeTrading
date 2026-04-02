@@ -218,6 +218,45 @@ Supported indicators:
 
 ---
 
+### `tema_price_cross` — TEMA/Price Crossover
+
+Opens a trade when the price crosses above or below the TEMA (Triple Exponential Moving Average). Optionally closes the opposite position before opening.
+
+```json
+{
+  "name": "TEMA cross EURUSD H1",
+  "type": "tema_price_cross",
+  "enabled": true,
+  "symbol": "EURUSD",
+  "timeframe": "H1",
+  "tema_period": 20,
+  "volume": 0.01,
+  "sl_points": 200,
+  "tp_points": 400,
+  "magic": 1001,
+  "close_opposite": true,
+  "comment": "tema_cross_h1"
+}
+```
+
+| Parameter | Type | Required | Description |
+|-----------|------|:---:|-------------|
+| `symbol` | string | Yes | Symbol to monitor |
+| `timeframe` | string | No | Timeframe (default: H1) |
+| `tema_period` | int | No | TEMA period (default: 20) |
+| `volume` | float | No | Lot size (default: 0.01) |
+| `sl_points` | float | No | Stop-loss in points (default: 0 = no SL) |
+| `tp_points` | float | No | Take-profit in points (default: 0 = no TP) |
+| `magic` | int | No | Magic number (default: 0) |
+| `close_opposite` | bool | No | Close existing opposite position before opening (default: true) |
+| `comment` | string | No | Order comment |
+
+Crossover logic:
+- **BUY**: previous close <= previous TEMA, current close > current TEMA
+- **SELL**: previous close >= previous TEMA, current close < current TEMA
+
+---
+
 ### `max_drawdown` — Account Drawdown Protection
 
 Closes ALL positions if account drawdown exceeds a percentage.
