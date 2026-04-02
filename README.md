@@ -7,7 +7,7 @@ A Claude Code skill that turns Claude into a MetaTrader 5 trading assistant. Cla
 Claude can:
 - **Open/close trades** — market orders, pending orders, partial closes
 - **Manage risk** — auto-calculate lot size from risk %, enforce SL/TP
-- **Analyze markets** — RSI, MACD, Bollinger Bands, ATR, ADX, Stochastic, Pivot Points
+- **Analyze markets** — RSI, MACD, Bollinger Bands, ATR, ADX, Stochastic, TEMA, Pivot Points
 - **Build strategies** — multi-step JSON strategies executed sequentially
 - **Monitor positions** — trailing stop, break-even, price alerts, drawdown protection
 
@@ -114,6 +114,7 @@ python mt5_monitor.py config.json --dry-run
 | `close_on_loss` | Close at max loss (account currency) |
 | `close_on_time` | Close after specified time (HH:MM) |
 | `indicator_alert` | Alert on RSI, MACD cross, Bollinger breakout |
+| `tema_price_cross` | Open trade on TEMA/price crossover |
 | `max_drawdown` | Close ALL if account drawdown exceeds threshold |
 
 ## License

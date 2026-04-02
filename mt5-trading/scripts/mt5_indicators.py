@@ -5,6 +5,7 @@ MT5 Technical Indicators — Technical indicators computed on MT5 OHLC data.
 Available indicators:
   - SMA (Simple Moving Average)
   - EMA (Exponential Moving Average)
+  - TEMA (Triple Exponential Moving Average — low-lag trend filter)
   - RSI (Relative Strength Index)
   - MACD (Moving Average Convergence Divergence)
   - Bollinger Bands
@@ -19,8 +20,9 @@ Requirements:
 
 CLI usage:
   python mt5_indicators.py EURUSD --timeframe H1 --indicators rsi macd bbands
-  python mt5_indicators.py EURUSD --analysis         # Full analysis
-  python mt5_indicators.py EURUSD --pivots            # Daily pivot points
+  python mt5_indicators.py EURUSD --indicators tema   # TEMA only
+  python mt5_indicators.py EURUSD --analysis           # Full analysis (includes TEMA)
+  python mt5_indicators.py EURUSD --pivots             # Daily pivot points
 
 Library usage:
   from mt5_indicators import get_analysis
@@ -576,7 +578,7 @@ def main():
     parser.add_argument("--count", type=int, default=200, help="Number of bars")
     parser.add_argument(
         "--indicators", nargs="+",
-        choices=["sma", "ema", "rsi", "macd", "bbands", "atr", "stoch", "adx"],
+        choices=["sma", "ema", "tema", "rsi", "macd", "bbands", "atr", "stoch", "adx"],
         help="Specific indicators",
     )
     parser.add_argument("--analysis", action="store_true", help="Full analysis")
@@ -602,6 +604,8 @@ def main():
             if "ema" in indicators:
                 result["ema_12"] = round(ema(closes, 12)[-1] or 0, 5)
                 result["ema_26"] = round(ema(closes, 26)[-1] or 0, 5)
+            if "tema" in indicators:
+                result["tema_20"] = round(tema(closes, 20)[-1] or 0, 5)
             if "rsi" in indicators:
                 result["rsi_14"] = round(rsi(closes)[-1] or 0, 2)
             if "macd" in indicators:
