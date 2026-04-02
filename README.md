@@ -117,6 +117,75 @@ python mt5_monitor.py config.json --dry-run
 | `tema_price_cross` | Open trade on TEMA/price crossover |
 | `max_drawdown` | Close ALL if account drawdown exceeds threshold |
 
+## XAUUSD.r — MT5 Command Cheatsheet
+
+Quick reference for all CLI commands using XAUUSD.r as the symbol.
+
+### Connessione e account
+
+| Azione | Comando |
+|--------|---------|
+| Connetti MT5 | `python mt5_trading.py connect` |
+| Info account (balance, equity, margin) | `python mt5_trading.py account` |
+| Info simbolo XAUUSD.r | `python mt5_trading.py symbol XAUUSD.r` |
+| Prezzo corrente bid/ask | `python mt5_trading.py tick XAUUSD.r` |
+
+### Analisi completa — tutti gli indicatori
+
+| Azione | Comando |
+|--------|---------|
+| Analisi H1 (default, 200 barre) | `python mt5_indicators.py XAUUSD.r --analysis` |
+| Analisi M15 — intraday | `python mt5_indicators.py XAUUSD.r --analysis --timeframe M15` |
+| Analisi M5 — scalping | `python mt5_indicators.py XAUUSD.r --analysis --timeframe M5` |
+| Analisi H4 — swing | `python mt5_indicators.py XAUUSD.r --analysis --timeframe H4` |
+| Analisi D1 — visione daily | `python mt5_indicators.py XAUUSD.r --analysis --timeframe D1` |
+| Storico esteso (500 barre) | `python mt5_indicators.py XAUUSD.r --analysis --timeframe H1 --count 500` |
+
+### Indicatori specifici
+
+| Azione | Comando |
+|--------|---------|
+| RSI + MACD + Bollinger + ATR | `python mt5_indicators.py XAUUSD.r --indicators rsi macd bbands atr` |
+| Solo RSI (14) | `python mt5_indicators.py XAUUSD.r --indicators rsi` |
+| Trend: SMA + EMA + TEMA | `python mt5_indicators.py XAUUSD.r --indicators sma ema tema` |
+| Momentum: Stochastic + ADX | `python mt5_indicators.py XAUUSD.r --indicators stoch adx` |
+| Volatilità: ATR + Bollinger | `python mt5_indicators.py XAUUSD.r --indicators atr bbands` |
+| MACD su M15 — momentum intraday | `python mt5_indicators.py XAUUSD.r --indicators macd --timeframe M15` |
+| ADX su D1 — forza trend daily | `python mt5_indicators.py XAUUSD.r --indicators adx --timeframe D1` |
+
+### Pivot points
+
+| Azione | Comando |
+|--------|---------|
+| Classic (default) | `python mt5_indicators.py XAUUSD.r --pivots classic` |
+| Fibonacci | `python mt5_indicators.py XAUUSD.r --pivots fibonacci` |
+| Camarilla (intraday) | `python mt5_indicators.py XAUUSD.r --pivots camarilla` |
+
+### OHLC — dati storici grezzi
+
+| Azione | Comando |
+|--------|---------|
+| Ultime 50 candele H1 | `python mt5_trading.py ohlc XAUUSD.r --timeframe H1 --count 50` |
+| Ultime 100 candele D1 | `python mt5_trading.py ohlc XAUUSD.r --timeframe D1 --count 100` |
+
+### Posizioni e ordini aperti
+
+| Azione | Comando |
+|--------|---------|
+| Posizioni aperte | `python mt5_trading.py positions` |
+| Ordini pendenti | `python mt5_trading.py pending` |
+
+### Monitoraggio continuo
+
+| Azione | Comando |
+|--------|---------|
+| Genera config di esempio | `python mt5_monitor.py --generate-config` |
+| Avvia monitor con config | `python mt5_monitor.py mt5_monitor_config.json` |
+| Dry-run — simula senza eseguire | `python mt5_monitor.py mt5_monitor_config.json --dry-run` |
+| Intervallo custom (ogni 10 sec) | `python mt5_monitor.py mt5_monitor_config.json --interval 10` |
+
+> **Nota:** `Ctrl+C` per fermare il monitor. Log scritto su `mt5_monitor_log.json`.
+
 ## License
 
 MIT

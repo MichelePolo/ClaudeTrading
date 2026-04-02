@@ -52,6 +52,15 @@ except ImportError:
 #  Helpers
 # ──────────────────────────────────────────────
 
+def _ensure_connected():
+    """Auto-connect to MT5 if not already initialized."""
+    if not mt5.initialize():
+        raise RuntimeError(
+            "MT5 not initialized. Make sure MetaTrader 5 is open and logged in, "
+            "then run: python mt5_trading.py connect"
+        )
+
+
 def _get_closes(symbol: str, timeframe: str = "H1", count: int = 200) -> tuple[list[dict], list[float]]:
     """Download OHLC bars and return (bars, closes)."""
     bars = mt5t.get_ohlc(symbol, timeframe, count)
@@ -365,20 +374,12 @@ def adx(bars: list[dict], period: int = 14) -> dict:
 # ──────────────────────────────────────────────
 
 def pivot_points(symbol: str, method: str = "classic") -> dict:
-    """Compute pivot points from the previous day.
-
-    Args:
-        symbol: Trading symbol.
-        method: 'classic', 'fibonacci', or 'camarilla'.
-
-    Returns:
-        dict with pivot, support, and resistance levels.
-    """
+    """Compute pivot points from the previous day."""
     bars = mt5t.get_ohlc(symbol, "D1", 2)
     if len(bars) < 2:
         raise RuntimeError("Insufficient daily data")
 
-    prev = bars[-2]  # Previous day
+    prev = bars[-2]
     h, l, c = prev["high"], prev["low"], prev["close"]
     pivot = (h + l + c) / 3
 
@@ -432,11 +433,7 @@ def get_analysis(
     timeframe: str = "H1",
     count: int = 200,
 ) -> dict:
-    """Perform a full technical analysis on a symbol.
-
-    Returns:
-        dict with all computed indicators and a summary.
-    """
+    """Perform a full technical analysis on a symbol."""
     mt5t._check_initialized()
     bars, closes = _get_closes(symbol, timeframe, count)
 
@@ -472,7 +469,6 @@ def get_analysis(
     # Generate signals
     signals = []
 
-    # RSI
     if current_rsi is not None:
         if current_rsi > 70:
             signals.append({"indicator": "RSI", "signal": "OVERBOUGHT", "value": round(current_rsi, 2)})
@@ -481,14 +477,12 @@ def get_analysis(
         else:
             signals.append({"indicator": "RSI", "signal": "NEUTRAL", "value": round(current_rsi, 2)})
 
-    # MACD
     if current_macd is not None and current_signal is not None:
         if current_macd > current_signal:
             signals.append({"indicator": "MACD", "signal": "BULLISH", "value": round(current_hist, 6)})
         else:
             signals.append({"indicator": "MACD", "signal": "BEARISH", "value": round(current_hist, 6)})
 
-    # Bollinger
     if current_bb_upper is not None:
         if current > current_bb_upper:
             signals.append({"indicator": "Bollinger", "signal": "ABOVE_UPPER", "value": round(current, 5)})
@@ -498,14 +492,12 @@ def get_analysis(
             bb_pct = (current - current_bb_lower) / (current_bb_upper - current_bb_lower) * 100
             signals.append({"indicator": "Bollinger", "signal": "IN_BAND", "value": round(bb_pct, 1)})
 
-    # Stochastic
     if current_stoch_k is not None:
         if current_stoch_k > 80:
             signals.append({"indicator": "Stochastic", "signal": "OVERBOUGHT", "value": round(current_stoch_k, 2)})
         elif current_stoch_k < 20:
             signals.append({"indicator": "Stochastic", "signal": "OVERSOLD", "value": round(current_stoch_k, 2)})
 
-    # ADX trend strength
     if current_adx is not None:
         trend = "STRONG" if current_adx > 25 else "WEAK"
         direction = "BULLISH" if (current_plus_di or 0) > (current_minus_di or 0) else "BEARISH"
@@ -515,14 +507,12 @@ def get_analysis(
             "value": round(current_adx, 2),
         })
 
-    # SMA trend
     if sma_50[-1] is not None and sma_200[-1] is not None:
         if sma_50[-1] > sma_200[-1]:
             signals.append({"indicator": "SMA_Cross", "signal": "GOLDEN_CROSS", "value": "SMA50 > SMA200"})
         else:
             signals.append({"indicator": "SMA_Cross", "signal": "DEATH_CROSS", "value": "SMA50 < SMA200"})
 
-    # Overall bias
     bullish = sum(1 for s in signals if "BULLISH" in s["signal"] or "OVERSOLD" in s["signal"] or "GOLDEN" in s["signal"])
     bearish = sum(1 for s in signals if "BEARISH" in s["signal"] or "OVERBOUGHT" in s["signal"] or "DEATH" in s["signal"])
 
@@ -588,6 +578,9 @@ def main():
     args = parser.parse_args()
 
     try:
+        # ── FIX: auto-connect to MT5 before any operation ──
+        _ensure_connected()
+
         if args.analysis:
             result = get_analysis(args.symbol, args.timeframe, args.count)
         elif args.pivots:
